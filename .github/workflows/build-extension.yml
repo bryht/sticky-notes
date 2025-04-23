@@ -78,35 +78,6 @@ jobs:
         path: build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip
         retention-days: 7
 
-    - name: Generate commit history
-      id: commit_history
-      run: |
-        # Make sure we have all tags
-        git fetch --tags
-        
-        # Get the latest tag or fallback to initial commit
-        PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
-        echo "Previous tag or initial commit: $PREVIOUS_TAG"
-        
-        # Create a temporary file for changelog
-        TEMP_CHANGELOG=$(mktemp)
-        
-        # Generate changelog
-        if git rev-parse --verify "$PREVIOUS_TAG" >/dev/null 2>&1; then
-          echo "Getting commits since $PREVIOUS_TAG"
-          git log --pretty=format:"- %s (%an)" "$PREVIOUS_TAG"..HEAD > "$TEMP_CHANGELOG"
-        else
-          echo "No previous tag found, getting last 10 commits"
-          git log --pretty=format:"- %s (%an)" -n 10 > "$TEMP_CHANGELOG"
-        fi
-        
-        # Print changelog for debugging
-        echo "Changelog content:"
-        cat "$TEMP_CHANGELOG"
-        
-        # Set output variable
-        echo "changelog<<EOF" >> $GITHUB_OUTPUT
-
     - name: Create version tag
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       run: |
@@ -129,7 +100,6 @@ jobs:
           
           Release date: ${{ steps.date.outputs.date }}
           
-          ${{ steps.commit_history.outputs.changelog }}
         files: build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip
         draft: false
         prerelease: false
