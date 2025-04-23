@@ -87,3 +87,20 @@ jobs:
         git tag -a v${{ steps.version.outputs.new_version }} -m "Version ${{ steps.version.outputs.new_version }}"
         git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${GITHUB_REF#refs/heads/}
         git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" v${{ steps.version.outputs.new_version }}
+        
+    - name: Create GitHub Release
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.new_version }}
+        name: Release v${{ steps.version.outputs.new_version }}
+        body: |
+          Sticky Notes Chrome Extension v${{ steps.version.outputs.new_version }}
+          
+          Built automatically via GitHub Actions.
+          Release date: ${{ steps.date.outputs.date }}
+        files: build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
