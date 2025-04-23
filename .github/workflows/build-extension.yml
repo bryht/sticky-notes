@@ -114,8 +114,6 @@ jobs:
           
           Release date: ${{ steps.date.outputs.date }}
           
-          ## What's Changed
-          
           ${{ steps.commit_history.outputs.changelog }}
         files: build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip
         draft: false
