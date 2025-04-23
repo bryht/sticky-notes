@@ -42,10 +42,11 @@ jobs:
         IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
         MAJOR=${VERSION_PARTS[0]}
         MINOR=${VERSION_PARTS[1]}
+        PATCH=${VERSION_PARTS[2]}
         
-        # Increment minor version
-        NEW_MINOR=$((MINOR + 1))
-        NEW_VERSION="$MAJOR.$NEW_MINOR.${{ github.run_number }}"
+        # Increment patch version
+        NEW_PATCH=$((PATCH + 1))
+        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
         
         # Update manifest.json with new version
         sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" manifest.json
@@ -91,17 +92,33 @@ jobs:
     - name: Generate commit history
       id: commit_history
       run: |
-        # Get commits since the last tag or a reasonable number of commits if no tag exists
-        PREVIOUS_TAG=$(git describe --tags --abbrev=0 --always 2>/dev/null || echo "")
-        if [ -n "$PREVIOUS_TAG" ]; then
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..HEAD >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+        # Make sure we have all tags
+        git fetch --tags
+        
+        # Get the latest tag or fallback to initial commit
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
+        echo "Previous tag or initial commit: $PREVIOUS_TAG"
+        
+        # Create a temporary file for changelog
+        TEMP_CHANGELOG=$(mktemp)
+        
+        # Generate changelog
+        if git rev-parse --verify "$PREVIOUS_TAG" >/dev/null 2>&1; then
+          echo "Getting commits since $PREVIOUS_TAG"
+          git log --pretty=format:"- %s (%an)" "$PREVIOUS_TAG"..HEAD > "$TEMP_CHANGELOG"
         else
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          git log --pretty=format:"- %s (%an)" -n 10 >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "No previous tag found, getting last 10 commits"
+          git log --pretty=format:"- %s (%an)" -n 10 > "$TEMP_CHANGELOG"
         fi
+        
+        # Print changelog for debugging
+        echo "Changelog content:"
+        cat "$TEMP_CHANGELOG"
+        
+        # Set multiline output properly
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        cat "$TEMP_CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
         
     - name: Create GitHub Release
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
