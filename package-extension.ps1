@@ -10,43 +10,31 @@ if (Test-Path ".\build\sticky-notes.zip") {
     Remove-Item ".\build\sticky-notes.zip" -Force
 }
 
+# Create temporary directory for flat file structure
+Write-Host "Creating temporary directory for flat structure..." -ForegroundColor Green
+$tempDir = Join-Path -Path $env:TEMP -ChildPath ([System.Guid]::NewGuid().ToString())
+New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+
 # Create the zip file
-Write-Host "Creating extension package..." -ForegroundColor Green
+Write-Host "Preparing files for packaging..." -ForegroundColor Green
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 # Set the root path to the directory containing the script file (project root)
 $rootPath = $scriptPath
 Set-Location $rootPath
 
-Add-Type -AssemblyName System.IO.Compression.FileSystem
+# Copy necessary files to temp directory (flat structure for root files)
+Copy-Item -Path "$rootPath\manifest.json", "$rootPath\background.js", "$rootPath\contentScript.js" -Destination $tempDir
+# For icon folder, preserve just that one folder
+Copy-Item -Path "$rootPath\icons" -Destination $tempDir -Recurse
+
+# Create zip file
+Write-Host "Creating extension package..." -ForegroundColor Green
 $zipFilePath = Join-Path -Path $rootPath -ChildPath "build\sticky-notes.zip"
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::CreateFromDirectory($tempDir, $zipFilePath, [System.IO.Compression.CompressionLevel]::Optimal, $false)
 
-# Get all files excluding the ones we don't want to package
-$filesToInclude = Get-ChildItem -Path $rootPath -Recurse -File | 
-    Where-Object { 
-        $relativePath = $_.FullName.Substring($rootPath.Length + 1)
-        -not ($relativePath -like ".git*" -or 
-              $relativePath -like "docs\*" -or 
-              $relativePath -like "tool\*" -or 
-              $relativePath -like "build\*" -or 
-              $relativePath -like "*.ps1")
-    }
-
-# Create a new zip file
-$zip = [System.IO.Compression.ZipFile]::Open($zipFilePath, [System.IO.Compression.ZipArchiveMode]::Create)
-
-foreach ($file in $filesToInclude) {
-    $relativePath = $file.FullName.Substring($rootPath.Length + 1)
-    Write-Host "Adding: $relativePath"
-    
-    $zipEntry = $zip.CreateEntry($relativePath)
-    $zipStream = $zipEntry.Open()
-    $fileStream = [System.IO.File]::OpenRead($file.FullName)
-    $fileStream.CopyTo($zipStream)
-    $zipStream.Close()
-    $fileStream.Close()
-}
-
-$zip.Dispose()
+# Clean up temp directory
+Remove-Item -Path $tempDir -Recurse -Force
 
 Write-Host "`nPackage created: build\sticky-notes.zip" -ForegroundColor Green
 Write-Host "You can now upload this package to the Chrome Web Store Developer Dashboard." -ForegroundColor Green

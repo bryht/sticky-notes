@@ -58,8 +58,17 @@ jobs:
     - name: Package Extension
       run: |
         cd ${{ github.workspace }}
-        zip -r build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip . \
-          -x "*.git*" "docs/*" "tool/*" "build/*" "*.ps1" ".github/*"
+        # Create a temporary directory for files to be zipped
+        mkdir -p temp_zip_dir
+        # Copy all necessary files to the temp directory (flat structure)
+        cp manifest.json background.js contentScript.js temp_zip_dir/
+        cp -r icons temp_zip_dir/
+        # Create zip from the temp directory (now all files will be at root)
+        cd temp_zip_dir
+        zip -r ../build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip .
+        # Clean up
+        cd ..
+        rm -rf temp_zip_dir
 
     - name: Upload Extension Package
       uses: actions/upload-artifact@v4
