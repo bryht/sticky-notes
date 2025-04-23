@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sticky Notes",
-  "version": "1.2.4",
+  "version": "1.3.5",
   "description": "Create sticky notes on any webpage",
   "permissions": ["storage"],
   "action": {
