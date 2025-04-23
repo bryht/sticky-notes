@@ -1,0 +1,76 @@
+name: Build Chrome Extension
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Create build directory
+      run: mkdir -p build
+
+    - name: Get current date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y%m%d')"
+
+    - name: Extract and update version
+      id: version
+      run: |
+        # Extract current version from manifest.json
+        CURRENT_VERSION=$(grep -oP '"version": "\K[^"]+' manifest.json)
+        
+        # Split version into components
+        IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+        MAJOR=${VERSION_PARTS[0]}
+        MINOR=${VERSION_PARTS[1]}
+        
+        # Increment minor version
+        NEW_MINOR=$((MINOR + 1))
+        NEW_VERSION="$MAJOR.$NEW_MINOR.${{ github.run_number }}"
+        
+        # Update manifest.json with new version
+        sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" manifest.json
+        
+        # Set output variables
+        echo "::set-output name=current_version::$CURRENT_VERSION"
+        echo "::set-output name=new_version::$NEW_VERSION"
+        echo "New version: $NEW_VERSION"
+
+    - name: Package Extension
+      run: |
+        cd ${{ github.workspace }}
+        zip -r build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip . \
+          -x "*.git*" "docs/*" "tool/*" "build/*" "*.ps1" ".github/*"
+
+    - name: Upload Extension Package
+      uses: actions/upload-artifact@v3
+      with:
+        name: sticky-notes-v${{ steps.version.outputs.new_version }}
+        path: build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip
+        retention-days: 7
+        
+    - name: Create version tag
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add manifest.json
+        git commit -m "Bump version to ${{ steps.version.outputs.new_version }}"
+        git tag -a v${{ steps.version.outputs.new_version }} -m "Version ${{ steps.version.outputs.new_version }}"
+        git push origin v${{ steps.version.outputs.new_version }}
+        git push
