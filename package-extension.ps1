@@ -13,7 +13,8 @@ if (Test-Path ".\build\sticky-notes.zip") {
 # Create the zip file
 Write-Host "Creating extension package..." -ForegroundColor Green
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-$rootPath = (Get-Item $scriptPath).Parent.FullName
+# Set the root path to the directory containing the script file (project root)
+$rootPath = $scriptPath
 Set-Location $rootPath
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
