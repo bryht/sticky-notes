@@ -104,10 +104,11 @@ jobs:
         echo "Changelog content:"
         cat "$TEMP_CHANGELOG"
         
-        # Set multiline output properly
-        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        # Fix: Use a unique delimiter for multiline output
+        DELIMITER="CHANGELOG_DELIMITER_$(date +%s)"
+        echo "changelog<<$DELIMITER" >> $GITHUB_OUTPUT
         cat "$TEMP_CHANGELOG" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+        echo "$DELIMITER" >> $GITHUB_OUTPUT
 
     - name: Create version tag
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
