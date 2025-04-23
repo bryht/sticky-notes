@@ -88,17 +88,35 @@ jobs:
         git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${GITHUB_REF#refs/heads/}
         git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" v${{ steps.version.outputs.new_version }}
         
+    - name: Generate commit history
+      id: commit_history
+      run: |
+        # Get commits since the last tag or a reasonable number of commits if no tag exists
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 --always 2>/dev/null || echo "")
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..HEAD >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          git log --pretty=format:"- %s (%an)" -n 10 >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        fi
+        
     - name: Create GitHub Release
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ steps.version.outputs.new_version }}
-        name: Release v${{ steps.version.outputs.new_version }}
+        name: v${{ steps.version.outputs.new_version }}
         body: |
           Sticky Notes Chrome Extension v${{ steps.version.outputs.new_version }}
           
-          Built automatically via GitHub Actions.
           Release date: ${{ steps.date.outputs.date }}
+          
+          ## What's Changed
+          
+          ${{ steps.commit_history.outputs.changelog }}
         files: build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip
         draft: false
         prerelease: false
