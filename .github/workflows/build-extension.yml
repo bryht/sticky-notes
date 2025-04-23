@@ -104,12 +104,8 @@ jobs:
         echo "Changelog content:"
         cat "$TEMP_CHANGELOG"
         
-        # Use a unique delimiter for multiline output to avoid conflicts
-        {
-          echo "changelog<<EOFCHANGELOG"
-          cat "$TEMP_CHANGELOG"
-          echo "EOFCHANGELOG"
-        } >> $GITHUB_OUTPUT
+        # Set output variable
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
 
     - name: Create version tag
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
