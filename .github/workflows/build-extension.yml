@@ -106,9 +106,9 @@ jobs:
         
         # Use a unique delimiter for multiline output to avoid conflicts
         {
-          echo "changelog<<END_OF_CHANGELOG"
+          echo "changelog<<EOFCHANGELOG"
           cat "$TEMP_CHANGELOG"
-          echo "END_OF_CHANGELOG"
+          echo "EOFCHANGELOG"
         } >> $GITHUB_OUTPUT
 
     - name: Create version tag
