@@ -77,18 +77,7 @@ jobs:
         name: sticky-notes-v${{ steps.version.outputs.new_version }}
         path: build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip
         retention-days: 7
-        
-    - name: Create version tag
-      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add manifest.json
-        git commit -m "Bump version to ${{ steps.version.outputs.new_version }}"
-        git tag -a v${{ steps.version.outputs.new_version }} -m "Version ${{ steps.version.outputs.new_version }}"
-        git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${GITHUB_REF#refs/heads/}
-        git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" v${{ steps.version.outputs.new_version }}
-        
+
     - name: Generate commit history
       id: commit_history
       run: |
@@ -119,7 +108,18 @@ jobs:
         echo "changelog<<EOF" >> $GITHUB_OUTPUT
         cat "$TEMP_CHANGELOG" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
-        
+
+    - name: Create version tag
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add manifest.json
+        git commit -m "Bump version to ${{ steps.version.outputs.new_version }}"
+        git tag -a v${{ steps.version.outputs.new_version }} -m "Version ${{ steps.version.outputs.new_version }}"
+        git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${GITHUB_REF#refs/heads/}
+        git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" v${{ steps.version.outputs.new_version }}
+
     - name: Create GitHub Release
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       uses: softprops/action-gh-release@v1
