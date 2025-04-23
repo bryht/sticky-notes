@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sticky Notes Icons Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .icon-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .instructions {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        ol {
+            padding-left: 20px;
+        }
+    </style>
+    <script src="generate-icons.js"></script>
+</head>
+<body>
+    <h1>Sticky Notes Extension Icons</h1>
+    
+    <div class="instructions">
+        <h2>How to save these icons as PNG files:</h2>
+        <ol>
+            <li>Click the "Generate & Download All Icons" button below</li>
+            <li>The icons will automatically download to your computer</li>
+            <li>Move the downloaded icon files to your extension's "icons" folder</li>
+        </ol>
+    </div>
+
+    <div class="icon-container">
+        <h2>16x16 Icon</h2>
+        <svg width="16" height="16" viewBox="0 0 16 16">
+            <path d="M1,1 L13,1 L15,3 L15,15 L1,15 Z" fill="#ffeb3b" stroke="#d6b600" stroke-width="1" />
+            <path d="M13,1 L13,3 L15,3" fill="none" stroke="#d6b600" stroke-width="1" />
+        </svg>
+        <p>Will be saved as: icon16.png</p>
+    </div>
+
+    <div class="icon-container">
+        <h2>48x48 Icon</h2>
+        <svg width="48" height="48" viewBox="0 0 48 48">
+            <path d="M4,4 L38,4 L44,10 L44,44 L4,44 Z" fill="#ffeb3b" stroke="#d6b600" stroke-width="2" />
+            <path d="M38,4 L38,10 L44,10" fill="none" stroke="#d6b600" stroke-width="2" />
+            <path d="M10,18 L38,18" stroke="#d6b600" stroke-width="1.5" stroke-dasharray="2,2" />
+            <path d="M10,26 L38,26" stroke="#d6b600" stroke-width="1.5" stroke-dasharray="2,2" />
+            <path d="M10,34 L38,34" stroke="#d6b600" stroke-width="1.5" stroke-dasharray="2,2" />
+        </svg>
+        <p>Will be saved as: icon48.png</p>
+    </div>
+
+    <div class="icon-container">
+        <h2>128x128 Icon</h2>
+        <svg width="128" height="128" viewBox="0 0 128 128">
+            <path d="M12,12 L100,12 L116,28 L116,116 L12,116 Z" fill="#ffeb3b" stroke="#d6b600" stroke-width="4" />
+            <path d="M100,12 L100,28 L116,28" fill="none" stroke="#d6b600" stroke-width="4" />
+            <path d="M30,46 L98,46" stroke="#d6b600" stroke-width="3" stroke-dasharray="4,4" />
+            <path d="M30,64 L98,64" stroke="#d6b600" stroke-width="3" stroke-dasharray="4,4" />
+            <path d="M30,82 L98,82" stroke="#d6b600" stroke-width="3" stroke-dasharray="4,4" />
+            <path d="M30,100 L70,100" stroke="#d6b600" stroke-width="3" stroke-dasharray="4,4" />
+        </svg>
+        <p>Will be saved as: icon128.png</p>
+    </div>
+</body>
+</html>
