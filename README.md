@@ -13,12 +13,13 @@ A browser extension that allows you to create, edit, and manage sticky notes on 
 - View all your notes from different websites in one dashboard
 - Delete unwanted notes
 - Simple and intuitive interface
+- Cross-browser compatibility
 
 ## Installation
 
 ### From Web Store
 
-1. Visit the Chrome Web Store (coming soon)
+1. Visit the [Chrome Web Store](https://chrome.google.com/webstore) (coming soon)
 2. Click "Add to Chrome"
 3. Confirm the installation
 
@@ -51,10 +52,8 @@ A browser extension that allows you to create, edit, and manage sticky notes on 
 This extension can be published to the Chrome Web Store. For detailed instructions, see [Publishing Guide](docs/PUBLISHING.md).
 
 To package the extension for publishing:
-1. On Windows: Run `tool/package-extension.ps1` in PowerShell
-2. On macOS/Linux: Run `bash tool/package-extension.sh` in terminal
-
-This will create a `build/sticky-notes.zip` file that you can upload to the Chrome Web Store Developer Dashboard.
+1. On Windows: Run `package-extension.ps1` in PowerShell
+2. The script will create a `build/sticky-notes.zip` file that you can upload to the Chrome Web Store Developer Dashboard.
 
 ## Privacy
 
@@ -62,9 +61,20 @@ This will create a `build/sticky-notes.zip` file that you can upload to the Chro
 - No data is sent to external servers
 - Your notes are private to your browser profile
 
+## Browser Compatibility
+
+This extension is designed to work with:
+- Google Chrome
+- Microsoft Edge
+- Firefox (with minor adjustments)
+
 ## Support Development
 
-If you find this extension useful, please consider supporting its continued development.
+If you find this extension useful, please consider supporting its continued development by:
+- Starring the repository
+- Reporting bugs
+- Suggesting features
+- Contributing code improvements
 
 ## License
 
@@ -73,3 +83,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+*Last updated: April 23, 2025*
