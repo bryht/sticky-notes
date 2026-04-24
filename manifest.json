@@ -1,24 +1,29 @@
 {
   "manifest_version": 3,
   "name": "Sticky Notes",
-  "version": "1.1.2",
-  "description": "Create sticky notes on any webpage",
-  "permissions": ["storage"],
+  "version": "2.0.0",
+  "description": "Create, manage, and organize sticky notes on any webpage — now with colors, resize, minimize, and import/export!",
+  "permissions": [
+    "storage",
+    "downloads"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Sticky Notes"
-  },
-  "background": {
-    "service_worker": "background.js"
+    "default_title": "Sticky Notes",
+    "default_popup": ""
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["contentScript.js"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
       "run_at": "document_end"
     }
   ],
