@@ -1,6 +1,11 @@
 import { getAllNotes, deleteNoteById } from './storage.js';
 import { createNote, deleteNoteElement } from './ui.js';
 import { NOTE_COLORS } from './config.js';
+import { toggleDarkMode, getDarkMode } from './darkmode.js';
+
+let currentSearchFilter = '';
+let selectedRowIndex = -1;
+let tableRows = [];
 
 export function showAllNotesDashboard() {
   const existing = document.getElementById('notes-dashboard');
@@ -17,14 +22,59 @@ export function showAllNotesDashboard() {
   
   const title = document.createElement('h2');
   title.textContent = 'All Notes';
-  
+
+  const headerButtons = document.createElement('div');
+  headerButtons.className = 'dashboard-header-buttons';
+
+  // Dark mode toggle
+  const darkBtn = document.createElement('button');
+  darkBtn.className = 'dash-btn dark-toggle-btn';
+  darkBtn.innerHTML = getDarkMode() ? '☀️' : '🌙';
+  darkBtn.title = getDarkMode() ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+  darkBtn.addEventListener('click', () => {
+    toggleDarkMode();
+    darkBtn.innerHTML = getDarkMode() ? '☀️' : '🌙';
+    darkBtn.title = getDarkMode() ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+    // Also refresh dashboard dark mode styles
+    const dashContent = dashboard.querySelector('.dashboard-content');
+    if (dashContent) {
+      dashContent.classList.toggle('dashboard-dark', getDarkMode());
+    }
+  });
+  headerButtons.appendChild(darkBtn);
+
   const closeBtn = document.createElement('button');
   closeBtn.innerHTML = '✕';
   closeBtn.className = 'dashboard-close';
   closeBtn.addEventListener('click', () => dashboard.remove());
+  headerButtons.appendChild(closeBtn);
   
-  header.append(title, closeBtn);
+  header.append(title, headerButtons);
   content.appendChild(header);
+
+  // Search bar
+  const searchBar = document.createElement('div');
+  searchBar.className = 'dashboard-search';
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'dashboard-search-input';
+  searchInput.placeholder = 'Search notes...';
+  searchInput.addEventListener('input', (e) => {
+    currentSearchFilter = e.target.value.toLowerCase();
+    filterNotes();
+  });
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'dashboard-search-clear';
+  clearBtn.innerHTML = '✕';
+  clearBtn.title = 'Clear search';
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    currentSearchFilter = '';
+    filterNotes();
+  });
+  searchBar.appendChild(searchInput);
+  searchBar.appendChild(clearBtn);
+  content.appendChild(searchBar);
   
   const list = document.createElement('div');
   list.className = 'dashboard-list';
@@ -49,6 +99,11 @@ export function showAllNotesDashboard() {
   dashboard.addEventListener('click', (e) => {
     if (e.target === dashboard) dashboard.remove();
   });
+
+  // Keyboard navigation
+  dashboard.addEventListener('keydown', handleDashboardKeyboard);
+  dashboard.tabIndex = -1;
+  dashboard.focus();
   
   // Load data
   getAllNotes().then(notes => {
@@ -70,19 +125,22 @@ export function showAllNotesDashboard() {
           <th>Content</th>
           <th>Page</th>
           <th>Color</th>
+          <th>Pinned</th>
           <th>Actions</th>
         </tr>
       </thead>
     `;
     
     const tbody = document.createElement('tbody');
+    tableRows = [];
+
     notes.forEach(note => {
       const tr = document.createElement('tr');
       
       // Content preview
       const temp = document.createElement('div');
       temp.innerHTML = note.content;
-      const text = (temp.textContent || '').substring(0, 80) + '...';
+      const text = (temp.textContent || '').substring(0, 80) + (note.content && note.content.length > 80 ? '...' : '');
       
       // Hostname
       let hostname = 'unknown';
@@ -92,11 +150,13 @@ export function showAllNotesDashboard() {
       
       // Color swatch
       const color = NOTE_COLORS[note.color]?.bg || '#fff59d';
-      
+      const pinned = note.pinned ? '📌' : '';
+
       tr.innerHTML = `
         <td class="dash-content">${escapeHtml(text)}</td>
         <td><a href="${escapeHtml(note.url)}" target="_blank">${escapeHtml(hostname)}</a></td>
         <td><span class="color-swatch" style="background:${color}"></span></td>
+        <td>${pinned}</td>
         <td><button class="dash-delete-btn" data-id="${note.id}" data-url="${note.url}">Delete</button></td>
       `;
       
@@ -106,15 +166,99 @@ export function showAllNotesDashboard() {
           const el = document.getElementById(note.id);
           if (el) el.remove();
           tr.remove();
+          tableRows = tableRows.filter(r => r !== tr);
+          filterNotes();
         });
       });
       
       tbody.appendChild(tr);
+      tableRows.push({ row: tr, note: note });
     });
     
     table.appendChild(tbody);
     list.appendChild(table);
+
+    // Filter notes if search is already filled
+    if (currentSearchFilter) filterNotes();
   });
+
+  function filterNotes() {
+    const filter = currentSearchFilter;
+    tableRows.forEach(({ row, note }) => {
+      const temp = document.createElement('div');
+      temp.innerHTML = note.content || '';
+      const text = temp.textContent || '';
+      let hostname = '';
+      try { hostname = new URL(note.url).hostname; } catch(e) {}
+
+      const match = !filter || 
+        text.toLowerCase().includes(filter) || 
+        hostname.toLowerCase().includes(filter);
+      row.style.display = match ? '' : 'none';
+    });
+  }
+
+  // Keyboard navigation handler
+  function handleDashboardKeyboard(e) {
+    // Focus search with /
+    if (e.key === '/' && document.activeElement !== searchInput) {
+      e.preventDefault();
+      searchInput.focus();
+      return;
+    }
+
+    // Arrow keys navigate rows
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const visibleRows = tableRows.filter(({ row }) => row.style.display !== 'none').map(({ row }) => row);
+      if (visibleRows.length === 0) return;
+
+      // Remove previous selection
+      visibleRows.forEach(r => r.classList.remove('dashboard-row-selected'));
+
+      if (e.key === 'ArrowDown') {
+        selectedRowIndex = Math.min(selectedRowIndex + 1, visibleRows.length - 1);
+      } else {
+        selectedRowIndex = Math.max(selectedRowIndex - 1, 0);
+      }
+      visibleRows[selectedRowIndex].classList.add('dashboard-row-selected');
+      visibleRows[selectedRowIndex].scrollIntoView({ block: 'nearest' });
+      return;
+    }
+
+    // Enter to jump to note
+    if (e.key === 'Enter') {
+      const visibleRows = tableRows.filter(({ row }) => row.style.display !== 'none');
+      if (selectedRowIndex >= 0 && selectedRowIndex < visibleRows.length) {
+        const noteData = visibleRows[selectedRowIndex].note;
+        dashboard.remove(); // Close dashboard
+        const noteEl = document.getElementById(noteData.id);
+        if (noteEl) {
+          noteEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          noteEl.classList.add('note-highlight');
+          setTimeout(() => noteEl.classList.remove('note-highlight'), 2000);
+        }
+      }
+      return;
+    }
+
+    // Delete to remove note
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      // Only when not in search input
+      if (document.activeElement === searchInput) return;
+      const visibleRows = tableRows.filter(({ row }) => row.style.display !== 'none');
+      if (selectedRowIndex >= 0 && selectedRowIndex < visibleRows.length) {
+        const { note, row } = visibleRows[selectedRowIndex];
+        deleteNoteById(note.id, note.url).then(() => {
+          const el = document.getElementById(note.id);
+          if (el) el.remove();
+          row.remove();
+          tableRows = tableRows.filter(r => r.row !== row);
+          selectedRowIndex = Math.max(0, selectedRowIndex - 1);
+        });
+      }
+    }
+  }
 }
 
 function escapeHtml(text) {

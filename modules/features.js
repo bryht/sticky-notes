@@ -1,6 +1,6 @@
-import { NOTE_COLORS } from './config.js';
+import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
 import { updateNoteColor, createNote } from './ui.js';
-import { getAllNotes, saveNotes } from './storage.js';
+import { getAllNotes, saveNotes, debouncedSave } from './storage.js';
 import { showAllNotesDashboard } from './dashboard.js';
 
 // ===================
@@ -58,6 +58,8 @@ export function addResizeHandle(note, footer) {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       saveNotes();
+      // Dispatch resized event for per-site defaults
+      note.dispatchEvent(new CustomEvent('resized'));
     }
     
     document.addEventListener('mousemove', onMove);
@@ -76,8 +78,12 @@ export function showColorPicker(note) {
   
   const picker = document.createElement('div');
   picker.className = 'color-picker-popup';
+
+  // Check dark mode via container class (avoids circular import)
+  const isDark = document.getElementById('sticky-notes-container')?.classList.contains('dark-mode') || false;
+  const colorMap = isDark ? DARK_NOTE_COLORS : NOTE_COLORS;
   
-  Object.entries(NOTE_COLORS).forEach(([key, colors]) => {
+  Object.entries(colorMap).forEach(([key, colors]) => {
     const swatch = document.createElement('div');
     swatch.className = 'color-swatch';
     swatch.style.backgroundColor = colors.bg;
@@ -168,12 +174,16 @@ export function importNotes() {
       
       // Reload current page notes
       data.notes
-        .filter(n => new URL(n.url).hostname === window.location.hostname)
+        .filter(n => {
+          try { return new URL(n.url).hostname === window.location.hostname; } catch(e) { return false; }
+        })
         .forEach(n => {
           createNote(n.content, n.position, n.id, {
             color: n.color,
             width: n.size?.width,
-            minHeight: n.size?.height
+            minHeight: n.size?.height,
+            pinned: n.pinned,
+            markdown: n.markdown
           });
         });
       

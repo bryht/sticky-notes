@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Sticky note body -->
+  <rect x="10" y="10" width="90" height="108" rx="4" ry="4" fill="#FFEB3B" stroke="#F9A825" stroke-width="2"/>
+  <!-- Folded corner -->
+  <path d="M70 10 L100 10 Q100 10 100 10 L100 40 Q100 40 100 40 Z" fill="#F9A825" opacity="0.4"/>
+  <path d="M70 10 L70 40 Q70 40 70 40 L100 40 Q100 40 100 40 Z" fill="#FDD835"/>
+  <!-- Lines on note -->
+  <line x1="24" y1="35" x2="82" y2="35" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="50" x2="76" y2="50" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="65" x2="70" y2="65" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="80" x2="64" y2="80" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round"/>
+  <!-- Pencil -->
+  <g transform="translate(80, 85) rotate(-45)">
+    <rect x="-4" y="-22" width="8" height="28" rx="1" fill="#FF7043" stroke="#D84315" stroke-width="1"/>
+    <polygon points="-4,6 4,6 0,14" fill="#FFE0B2" stroke="#D84315" stroke-width="1"/>
+    <rect x="-4" y="-26" width="8" height="6" rx="1" fill="#795548" stroke="#5D4037" stroke-width="1"/>
+  </g>
+</svg>

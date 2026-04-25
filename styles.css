@@ -1,4 +1,4 @@
-/* Sticky Notes Extension - v2.0.0 Styles */
+/* Sticky Notes Extension - v2.1.0 Styles */
 
 /* Container */
 #sticky-notes-container {
@@ -31,8 +31,37 @@
   transition: box-shadow 0.2s ease, transform 0.1s ease;
 }
 
-.sticky-note:hover {
+.shaky-note:hover {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+}
+
+/* Pinned note */
+.shaky-note.note-pinned {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border: 2px solid #ff9800;
+}
+
+.shaky-note.note-pinned::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 20px 20px 0;
+  border-color: transparent #ff9800 transparent transparent;
+  border-radius: 0 4px 0 0;
+}
+
+/* Note highlight animation (for dashboard jump-to) */
+@keyframes noteHighlightPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(33, 150, 243, 0); }
+  50% { box-shadow: 0 0 0 6px rgba(33, 150, 243, 0.6); }
+}
+
+.shaky-note.note-highlight {
+  animation: noteHighlightPulse 0.5s ease 3;
 }
 
 /* Header */
@@ -80,6 +109,18 @@
   color: white;
 }
 
+.note-btn.pin-btn {
+  font-size: 11px;
+}
+
+.note-btn.markdown-btn {
+  font-size: 11px;
+}
+
+.note-btn.markdown-btn.active {
+  opacity: 1 !important;
+}
+
 /* Content */
 .note-content {
   flex: 1;
@@ -92,6 +133,40 @@
 
 .note-content:focus {
   background-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Markdown rendered content */
+.note-content.markdown-rendered {
+  cursor: default;
+}
+
+.note-content.markdown-rendered h1 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 8px 0 4px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.note-content.markdown-rendered h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 6px 0 3px 0;
+}
+
+.note-content.markdown-rendered h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 4px 0 2px 0;
+}
+
+.note-content.markdown-rendered ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.note-content.markdown-rendered a {
+  color: #1976d2;
+  text-decoration: underline;
 }
 
 /* Footer / Resize */
@@ -151,6 +226,74 @@
   transform: scale(1.1);
 }
 
+/* Rich Text Toolbar */
+.richtext-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 3px 4px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin: 0 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.rt-btn {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #333;
+  min-width: 24px;
+  text-align: center;
+  transition: background-color 0.15s;
+  line-height: 1.3;
+}
+
+.rt-btn:hover {
+  background-color: #e3e3e3;
+  border-color: #aaa;
+}
+
+.rt-btn:active {
+  background-color: #ddd;
+}
+
+/* Error Banner */
+.sticky-notes-error-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #d32f2f;
+  color: white;
+  padding: 10px 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 14px;
+  z-index: 99999;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+}
+
+.error-dismiss {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 3px;
+  margin-left: 10px;
+}
+
+.error-dismiss:hover {
+  background: rgba(255,255,255,0.4);
+}
+
 /* Dashboard Overlay */
 #notes-dashboard {
   position: fixed;
@@ -164,6 +307,7 @@
   justify-content: center;
   align-items: center;
   backdrop-filter: blur(2px);
+  outline: none;
 }
 
 .dashboard-content {
@@ -193,6 +337,25 @@
   font-size: 18px;
 }
 
+.dashboard-header-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dark-toggle-btn {
+  background: none !important;
+  border: none !important;
+  font-size: 18px !important;
+  padding: 2px 6px !important;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.dark-toggle-btn:hover {
+  opacity: 1;
+}
+
 .dashboard-close {
   background: none;
   border: none;
@@ -208,9 +371,55 @@
   background-color: rgba(0,0,0,0.08);
 }
 
+/* Dashboard Search */
+.dashboard-search {
+  display: flex;
+  align-items: center;
+  padding: 8px 20px;
+  border-bottom: 1px solid #eee;
+  gap: 8px;
+}
+
+.dashboard-search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.dashboard-search-input:focus {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+}
+
+.dashboard-search-clear {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  color: #999;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.dashboard-search-clear:hover {
+  background-color: #f0f0f0;
+  color: #666;
+}
+
+/* Dashboard Keyboard Navigation */
+.dashboard-row-selected {
+  background-color: #e3f2fd !important;
+  outline: 2px solid #1976d2;
+  outline-offset: -2px;
+}
+
 .dashboard-list {
   overflow-y: auto;
-  max-height: calc(85vh - 120px);
+  max-height: calc(85vh - 180px);
   padding: 16px 20px;
 }
 
@@ -308,7 +517,7 @@
 }
 
 /* Minimized state */
-.sticky-note[data-minimized="true"] {
+.shaky-note[data-minimized="true"] {
   min-height: 32px !important;
 }
 
@@ -346,4 +555,124 @@
 
 .sticky-note {
   animation: popIn 0.2s ease-out;
+}
+
+/* ===================
+   Dark Mode Styles
+   =================== */
+
+#sticky-notes-container.dark-mode .sticky-note {
+  color: #e0e0e0;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+}
+
+#sticky-notes-container.dark-mode .sticky-note:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+#sticky-notes-container.dark-mode .note-header {
+  color: #e0e0e0;
+}
+
+#sticky-notes-container.dark-mode .note-title {
+  color: rgba(255,255,255,0.7);
+}
+
+#sticky-notes-container.dark-mode .note-content:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+#sticky-notes-container.dark-mode .color-picker-popup {
+  background: #333;
+  border-color: #555;
+}
+
+#sticky-notes-container.dark-mode .richtext-toolbar {
+  background: #333;
+  border-color: #555;
+}
+
+#sticky-notes-container.dark-mode .rt-btn {
+  background: #444;
+  border-color: #555;
+  color: #ddd;
+}
+
+#sticky-notes-container.dark-mode .rt-btn:hover {
+  background-color: #555;
+}
+
+/* Dashboard dark mode */
+.sticky-notes-dark .dashboard-content {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+.sticky-notes-dark .dashboard-header {
+  background-color: #5c5420;
+  color: #fdd835;
+}
+
+.sticky-notes-dark .dashboard-search-input {
+  background-color: #2a2a2a;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+.sticky-notes-dark .dashboard-search-input:focus {
+  border-color: #fdd835;
+  box-shadow: 0 0 0 2px rgba(253, 216, 53, 0.2);
+}
+
+.sticky-notes-dark .dashboard-table th {
+  color: #aaa;
+  border-bottom-color: #444;
+}
+
+.sticky-notes-dark .dashboard-table td {
+  color: #ccc;
+  border-bottom-color: #333;
+}
+
+.sticky-notes-dark .dashboard-table tbody tr:hover {
+  background-color: #2a2a2a;
+}
+
+.sticky-notes-dark .dashboard-table a {
+  color: #fdd835;
+}
+
+.sticky-notes-dark .dash-delete-btn {
+  background-color: #333;
+  border-color: #5c2030;
+  color: #f06292;
+}
+
+.sticky-notes-dark .dash-delete-btn:hover {
+  background-color: #c2185b;
+  color: white;
+}
+
+.sticky-notes-dark .dashboard-toolbar {
+  background-color: #262626;
+  border-top-color: #444;
+}
+
+.sticky-notes-dark .dash-btn {
+  background-color: #333;
+  border-color: #555;
+  color: #ccc;
+}
+
+.sticky-notes-dark .dash-btn:hover {
+  background-color: #444;
+}
+
+.sticky-notes-dark .dashboard-row-selected {
+  background-color: #2a3a2a !important;
+  outline-color: #81c784;
+}
+
+body.sticky-notes-dark .dashboard-close {
+  color: #f06292;
 }

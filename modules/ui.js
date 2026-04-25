@@ -1,8 +1,9 @@
-import { NOTE_COLORS, DEFAULT_NOTE, Z_INDEX_BASE } from './config.js';
+import { NOTE_COLORS, DARK_NOTE_COLORS, DEFAULT_NOTE, Z_INDEX_BASE, PINNED_Z_INDEX, getSiteDefaults, setSiteDefaults } from './config.js';
 import { makeDraggable } from './drag.js';
 import { saveNotes, debouncedSave } from './storage.js';
 import { showAllNotesDashboard } from './dashboard.js';
 import { minimizeNote, restoreNote, addResizeHandle, showColorPicker, exportNotes, importNotes } from './features.js';
+import { isMarkdownEnabled, setMarkdownState } from './markdown.js';
 
 let activeContainer = null;
 let noteCounter = 0;
@@ -27,6 +28,8 @@ export function generateId() {
 }
 
 export function bringToFront(note) {
+  // If note is pinned, keep it at pinned z-index
+  if (note.dataset.pinned === 'true') return;
   highestZIndex++;
   note.style.zIndex = highestZIndex;
 }
@@ -46,21 +49,31 @@ export function createNote(content = '', position = null, id = null, options = {
   }
   
   const colorKey = options.color || DEFAULT_NOTE.color;
-  const colors = NOTE_COLORS[colorKey] || NOTE_COLORS.yellow;
+  const isDark = document.getElementById('sticky-notes-container')?.classList.contains('dark-mode') || false;
+  const colors = isDark ? DARK_NOTE_COLORS[colorKey] || DARK_NOTE_COLORS.yellow : NOTE_COLORS[colorKey] || NOTE_COLORS.yellow;
   
   const note = document.createElement('div');
   note.className = 'sticky-note';
   note.id = noteId;
   note.dataset.color = colorKey;
   note.dataset.minimized = 'false';
+  note.dataset.pinned = options.pinned ? 'true' : 'false';
+  if (options.markdown) {
+    note.dataset.markdown = 'true';
+    setMarkdownState(noteId, true);
+  }
   note.style.cssText = `
     top: ${position.top};
     left: ${position.left};
     width: ${options.width || DEFAULT_NOTE.width};
     min-height: ${options.minHeight || DEFAULT_NOTE.minHeight};
     background-color: ${colors.bg};
-    z-index: ${++highestZIndex};
+    z-index: ${options.pinned ? PINNED_Z_INDEX : ++highestZIndex};
   `;
+
+  if (options.pinned) {
+    note.classList.add('note-pinned');
+  }
   
   // Click to bring to front
   note.addEventListener('mousedown', () => bringToFront(note));
@@ -80,6 +93,16 @@ export function createNote(content = '', position = null, id = null, options = {
   const buttons = document.createElement('div');
   buttons.className = 'note-buttons';
   
+  // Pin btn
+  const pinBtn = document.createElement('span');
+  pinBtn.innerHTML = options.pinned ? '📌' : '📍';
+  pinBtn.title = options.pinned ? 'Unpin' : 'Pin on top';
+  pinBtn.className = 'note-btn pin-btn' + (options.pinned ? ' pinned' : '');
+  pinBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePin(note, pinBtn);
+  });
+
   // Color picker btn
   const colorBtn = document.createElement('span');
   colorBtn.innerHTML = '🎨';
@@ -90,6 +113,17 @@ export function createNote(content = '', position = null, id = null, options = {
     showColorPicker(note);
   });
   
+  // Markdown btn
+  const mdBtn = document.createElement('span');
+  mdBtn.innerHTML = '📝';
+  mdBtn.title = options.markdown ? 'Disable Markdown' : 'Enable Markdown';
+  mdBtn.className = 'note-btn markdown-btn';
+  mdBtn.style.opacity = options.markdown ? '1' : '0.5';
+  mdBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    import('./markdown.js').then(({ toggleMarkdown }) => toggleMarkdown(note));
+  });
+
   // Minimize btn
   const minBtn = document.createElement('span');
   minBtn.innerHTML = '─';
@@ -118,7 +152,7 @@ export function createNote(content = '', position = null, id = null, options = {
   delBtn.className = 'note-btn delete-btn';
   delBtn.addEventListener('click', () => deleteNoteElement(note));
   
-  buttons.append(colorBtn, minBtn, dashBtn, delBtn);
+  buttons.append(pinBtn, colorBtn, mdBtn, minBtn, dashBtn, delBtn);
   header.appendChild(buttons);
   
   // Content
@@ -127,6 +161,11 @@ export function createNote(content = '', position = null, id = null, options = {
   contentArea.contentEditable = true;
   contentArea.innerHTML = content;
   contentArea.addEventListener('input', debouncedSave);
+
+  // On resize, save per-site defaults  
+  note.addEventListener('resized', () => {
+    saveSiteDefault(note);
+  });
   
   // Footer with resize handle
   const footer = document.createElement('div');
@@ -147,6 +186,39 @@ export function createNote(content = '', position = null, id = null, options = {
   return note;
 }
 
+function togglePin(note, pinBtn) {
+  const isPinned = note.dataset.pinned === 'true';
+  note.dataset.pinned = isPinned ? 'false' : 'true';
+
+  if (note.dataset.pinned === 'true') {
+    note.classList.add('note-pinned');
+    note.style.zIndex = PINNED_Z_INDEX;
+    pinBtn.innerHTML = '📌';
+    pinBtn.title = 'Unpin';
+  } else {
+    note.classList.remove('note-pinned');
+    highestZIndex++;
+    note.style.zIndex = highestZIndex;
+    pinBtn.innerHTML = '📍';
+    pinBtn.title = 'Pin on top';
+  }
+  debouncedSave();
+}
+
+async function saveSiteDefault(note, colorKey) {
+  try {
+    const hostname = window.location.hostname;
+    const current = await getSiteDefaults(hostname);
+    const updates = {};
+    if (colorKey) updates.color = colorKey;
+    if (note.style.width) updates.width = note.style.width;
+    if (note.style.minHeight) updates.minHeight = note.style.minHeight;
+    if (Object.keys(updates).length > 0) {
+      await setSiteDefaults(hostname, updates);
+    }
+  } catch(e) { /* Per-site defaults are best-effort */ }
+}
+
 export function deleteNoteElement(note) {
   // Clean up listeners
   const clone = note.cloneNode(true);
@@ -155,10 +227,20 @@ export function deleteNoteElement(note) {
 }
 
 export function updateNoteColor(note, colorKey) {
-  const colors = NOTE_COLORS[colorKey];
-  if (!colors) return;
+  const isDark = document.getElementById('sticky-notes-container')?.classList.contains('dark-mode') || false;
+  const lightColors = NOTE_COLORS[colorKey];
+  const darkColors = DARK_NOTE_COLORS[colorKey];
+  if (!lightColors) return;
+
   note.dataset.color = colorKey;
-  note.style.backgroundColor = colors.bg;
-  note.querySelector('.note-header').style.backgroundColor = colors.header;
+
+  if (isDark && darkColors) {
+    note.style.backgroundColor = darkColors.bg;
+    note.querySelector('.note-header').style.backgroundColor = darkColors.header;
+  } else {
+    note.style.backgroundColor = lightColors.bg;
+    note.querySelector('.note-header').style.backgroundColor = lightColors.header;
+  }
+
   saveNotes();
 }

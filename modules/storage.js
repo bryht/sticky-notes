@@ -1,4 +1,4 @@
-import { SAVE_DEBOUNCE_MS } from './config.js';
+import { SAVE_DEBOUNCE_MS, STORAGE_VERSION } from './config.js';
 
 // Debounce utility
 let saveTimeout = null;
@@ -30,9 +30,10 @@ export function saveNotes() {
   
   const currentPageNotes = [];
   notes.forEach(note => {
+    const contentEl = note.querySelector('.note-content');
     const noteData = {
       id: note.id,
-      content: note.querySelector('.note-content').innerHTML,
+      content: contentEl ? contentEl.innerHTML : '',
       position: {
         top: note.style.top,
         left: note.style.left
@@ -43,6 +44,8 @@ export function saveNotes() {
       },
       color: note.dataset.color || 'yellow',
       minimized: note.dataset.minimized === 'true',
+      pinned: note.dataset.pinned === 'true',
+      markdown: note.dataset.markdown === 'true',
       url: currentUrl,
       timestamp: Date.now()
     };
@@ -74,7 +77,9 @@ export function loadNotes() {
               width: noteData.size?.width,
               minHeight: noteData.size?.height,
               color: noteData.color,
-              minimized: noteData.minimized
+              minimized: noteData.minimized,
+              pinned: noteData.pinned,
+              markdown: noteData.markdown
             }
           );
         });
@@ -98,4 +103,39 @@ export function deleteNoteById(noteId, url) {
     noteId: noteId,
     url: url
   }).catch(err => console.warn('Delete failed:', err));
+}
+
+// ===================
+// Storage Migration
+// ===================
+
+export function migrateStorage() {
+  chrome.storage.local.get(['storageVersion', 'allNotes', 'urlIndex'], (result) => {
+    const currentVersion = result.storageVersion || 1;
+
+    if (currentVersion < 2) {
+      // Migration v1 → v2: Add timestamp and pinned fields to existing notes
+      const allNotes = result.allNotes || {};
+      const urlIndex = result.urlIndex || {};
+
+      Object.keys(allNotes).forEach(noteId => {
+        const note = allNotes[noteId];
+        // Add missing fields with defaults
+        if (!note.timestamp) note.timestamp = Date.now();
+        if (note.pinned === undefined) note.pinned = false;
+        if (note.markdown === undefined) note.markdown = false;
+        if (!note.size) {
+          note.size = { width: '200px', height: '150px' };
+        }
+      });
+
+      chrome.storage.local.set({
+        allNotes,
+        urlIndex,
+        storageVersion: STORAGE_VERSION
+      }, () => {
+        console.log(`Sticky Notes: Storage migrated from v${currentVersion} to v${STORAGE_VERSION}`);
+      });
+    }
+  });
 }

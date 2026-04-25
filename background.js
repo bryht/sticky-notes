@@ -1,16 +1,73 @@
-// Background script for Sticky Notes Extension v2.0.0
+// Background script for Sticky Notes Extension v2.1.0
+
+const STORAGE_VERSION = 2;
 
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === 'install' || reason === 'update') {
     initializeStorage();
   }
+
+  // Register context menu
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'save-to-sticky-note',
+      title: 'Save selection to Sticky Note',
+      contexts: ['selection']
+    });
+  });
+});
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'save-to-sticky-note' && info.selectionText) {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'createNoteWithText',
+      text: info.selectionText
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.log('Tab not ready for sticky notes');
+      }
+    });
+  }
 });
 
 function initializeStorage() {
-  chrome.storage.local.get(['allNotes', 'urlIndex', 'hasDonated'], (result) => {
+  chrome.storage.local.get(['allNotes', 'urlIndex', 'hasDonated', 'storageVersion'], (result) => {
     if (!result.allNotes) chrome.storage.local.set({ allNotes: {} });
     if (!result.urlIndex) chrome.storage.local.set({ urlIndex: {} });
     if (result.hasDonated === undefined) chrome.storage.local.set({ hasDonated: false });
+
+    // Storage migration
+    const currentVersion = result.storageVersion || 1;
+    if (currentVersion < STORAGE_VERSION) {
+      migrateStorage(currentVersion, result);
+    }
+  });
+}
+
+function migrateStorage(fromVersion, data) {
+  const allNotes = data.allNotes || {};
+  const urlIndex = data.urlIndex || {};
+
+  if (fromVersion < 2) {
+    // v1 → v2: Add missing fields with defaults
+    Object.keys(allNotes).forEach(noteId => {
+      const note = allNotes[noteId];
+      if (!note.timestamp) note.timestamp = Date.now();
+      if (note.pinned === undefined) note.pinned = false;
+      if (note.markdown === undefined) note.markdown = false;
+      if (!note.size) {
+        note.size = { width: '200px', height: '150px' };
+      }
+    });
+  }
+
+  chrome.storage.local.set({
+    allNotes,
+    urlIndex,
+    storageVersion: STORAGE_VERSION
+  }, () => {
+    console.log(`Sticky Notes: Storage migrated from v${fromVersion} to v${STORAGE_VERSION}`);
   });
 }
 
