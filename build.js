@@ -53,21 +53,116 @@ function bundleContentScript() {
     // Convert `export default function` → `function`
     code = code.replace(/^export\s+default\s+function\s+/gm, 'function ');
 
-    // Replace dynamic import() with direct calls (all symbols are in scope)
-    // Pattern: import('./module.js').then(({ name }) => { ... })
-    code = code.replace(/import\(['"]\.\/(\w+)\.js['"]\)\.then\(\s*\(\s*\{([^}]+)\}\s*\)\s*=>\s*\{/g, 
-      (match, mod, destructure) => {
-        return `/* direct call (was import ${mod}) */ {`;
-      });
+    // Replace dynamic import() calls with direct calls (all symbols are in scope
+    // since all modules are inlined into the same IIFE).
+    //
+    // Three patterns exist in the source:
+    //
+    // 1. Multi-line block:  import('./mod.js').then(({ name }) => { ... });
+    //    → Replace with a plain block: /* direct call (was import mod) */ { ... }
+    //    Also must remove the closing `)` from the `});` that ends the .then() callback.
+    //
+    // 2. Single-expr destructure:  import('./mod.js').then(({ name }) => name(args));
+    //    → Replace entire import().then(...) with just the call expression.
+    //
+    // 3. Single-expr namespace:  import('./mod.js').then(m => m.name())
+    //    → Replace entire import().then(...) with just name().
 
-    // Pattern: import('./module.js').then(({ name }) => simpleExpression);
-    code = code.replace(/import\(['"]\.\/(\w+)\.js['"]\)\.then\(\s*\(\s*\{([^}]+)\}\s*\)\s*=>\s*([^\n]+)/g,
-      (match, mod, destructure, call) => {
-        return `/* direct call (was import ${mod}) */\n${call.trim()}`;
-      });
+    // Pass 1: Mark multi-line import blocks so we can fix their closing });
+    const lines = code.split('\n');
+    let openBlocks = 0;
 
-    // Remove any remaining bare dynamic imports
-    code = code.replace(/import\(['"]\.\/\w+\.js['"]\)[^;]*;?\s*/g, '');
+    const fixedLines = lines.map(line => {
+      // Pattern 1: multi-line — starts .then(({ name }) => {
+      // Replace the import().then( portion with a block comment.
+      // Track the block so we can fix the closing }); → }
+      const blockMatch = line.match(/^(\s*)import\(['"]\.\/(\w+)\.js['"]\)\.then\(\s*\(\s*\{([^}]+)\}\s*\)\s*=>\s*\{(.*)$/);
+      if (blockMatch) {
+        const [, indent, mod, destructure, rest] = blockMatch;
+        openBlocks++;
+        return `${indent}/* direct call (was import ${mod}) */ {${rest}`;
+      }
+
+      // Pattern 3: .then(m => m.name()) — namespace access
+      const nsMatch = line.match(/^(.*)import\(['"]\.\/(\w+)\.js['"]\)\.then\(\s*m\s*=>\s*m\.(\w+)\(\)\)(.*)$/);
+      if (nsMatch) {
+        const [, before, mod, func, after] = nsMatch;
+        return `${before}${func}()${after}`;
+      }
+
+      // Pattern 2: .then(({ name }) => expr) on a single line
+      // The expression after => may itself contain parens like toggleMarkdown(note)
+      // or debouncedSave(), so we can't just count parens naively.
+      // Strategy: find import('./...'), then .then(, then match the callback which
+      // is ({...}) => <expr>). The <expr> extends to the closing ) of .then().
+      // Since .then() always ends the statement on the same line (single-line pattern),
+      // we find the LAST ) on the line that closes .then().
+      const importStart = line.indexOf("import('./");
+      if (importStart === -1) {
+        const importStart2 = line.indexOf('import("./');
+        if (importStart2 === -1) return line;
+      }
+      const idx = line.indexOf("import('./") !== -1 ? line.indexOf("import('./") : line.indexOf('import("./');
+      const thenIdx = line.indexOf('.then(', idx);
+      if (thenIdx === -1) return line;
+
+      // Find the position right after .then(
+      const thenOpenParen = thenIdx + 5; // index of '(' in '.then('
+
+      // Find the matching closing ) for .then( by counting ALL bracket types
+      let depth = 1; // we're inside .then(
+      let endIdx = -1;
+      for (let i = thenOpenParen + 1; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '(') depth++;
+        else if (ch === ')') {
+          depth--;
+          if (depth === 0) {
+            endIdx = i;
+            break;
+          }
+        }
+      }
+      if (endIdx === -1) return line;
+
+      // Extract the .then(...) content
+      const thenContent = line.slice(thenOpenParen + 1, endIdx);
+
+      // Try Pattern 2a: ({ name }) => expr
+      const arrowMatch = thenContent.match(/^\s*\(\s*\{([^}]+)\}\s*\)\s*=>\s*([\s\S]+)$/);
+      if (arrowMatch) {
+        const [, destructure, expr] = arrowMatch;
+        const before = line.slice(0, idx);
+        const after = line.slice(endIdx + 1);
+        return `${before}${expr.trim()}${after}`;
+      }
+
+      return line;
+    });
+
+    // Pass 2: Fix closing }); for Pattern 1 blocks
+    // When we replaced import(...).then(({X}) => { with /* direct call */ {,
+    // the corresponding closing }); still has the ) that closes .then().
+    // We need to convert }); → }
+    const finalLines = [];
+    let blockDepth = 0;
+    for (const line of fixedLines) {
+      let newLine = line;
+      if (line.includes('/* direct call (was import')) {
+        blockDepth++;
+      }
+      if (blockDepth > 0) {
+        // Match closing }); that is alone on a line (possibly with semicolon)
+        const closingMatch = newLine.match(/^(\s*)\}\s*\);?\s*$/);
+        if (closingMatch) {
+          const indent = closingMatch[1];
+          newLine = newLine.replace(/\}\s*\);?/, '}');
+          blockDepth--;
+        }
+      }
+      finalLines.push(newLine);
+    }
+    code = finalLines.join('\n');
 
     parts.push(`// =================== ${modName}.js ===================\n${code}\n\n`);
   }
