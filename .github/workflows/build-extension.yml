@@ -87,8 +87,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     # ── Publish to Chrome Web Store ──
+    # Only runs when all Chrome Web Store secrets are configured
     - name: Publish to Chrome Web Store
-      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.CHROME_CLIENT_ID != '' && secrets.CHROME_CLIENT_SECRET != '' && secrets.CHROME_REFRESH_TOKEN != ''
       uses: mtruessel/chrome-webstore-upload-action@v2
       with:
         file-path: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
