@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sticky Notes",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "description": "Create, manage, and organize sticky notes on any webpage — with colors, dark mode, pinning, markdown, search, rich text, and more!",
   "permissions": [
     "storage",
