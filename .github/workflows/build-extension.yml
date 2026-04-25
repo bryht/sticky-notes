@@ -79,10 +79,32 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # ── Publish to Chrome Web Store (only when secrets are configured) ──
+  # ── Publish to Chrome Web Store (separate job, only when secrets are set) ──
+  publish-webstore:
+    needs: build
+    if: github.event_name == 'push' && vars.CHROME_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Build extension
+      run: node build.js
+
+    - name: Extract current version
+      id: version
+      run: |
+        CURRENT_VERSION=$(grep -oP '"version": "\K[^"]+' manifest.json)
+        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
     - name: Publish to Chrome Web Store
-      if: github.event_name == 'push' && env.CHROME_CLIENT_ID != ''
       uses: mtruessel/chrome-webstore-upload-action@v2
       with:
         file-path: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
@@ -91,5 +113,3 @@ jobs:
         client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
         refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
         publish: true
-      env:
-        CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
