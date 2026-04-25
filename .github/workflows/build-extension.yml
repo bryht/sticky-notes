@@ -25,82 +25,60 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Create build directory
-      run: mkdir -p build
+    - name: Build extension
+      run: node build.js
 
     - name: Get current date
       id: date
       run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
 
-    - name: Extract and update version
+    - name: Extract current version
       id: version
       run: |
-        # Extract current version from manifest.json
         CURRENT_VERSION=$(grep -oP '"version": "\K[^"]+' manifest.json)
-        
-        # Split version into components
-        IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
-        MAJOR=${VERSION_PARTS[0]}
-        MINOR=${VERSION_PARTS[1]}
-        PATCH=${VERSION_PARTS[2]}
-        
-        # Increment patch version
-        NEW_PATCH=$((PATCH + 1))
-        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-        
-        # Update manifest.json with new version
-        sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" manifest.json
-        
-        # Set output variables
         echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-        echo "New version: $NEW_VERSION"
-
-    - name: Package Extension
-      run: |
-        cd ${{ github.workspace }}
-        # Create a temporary directory for files to be zipped
-        mkdir -p temp_zip_dir
-        # Copy all necessary files to the temp directory (flat structure)
-        cp manifest.json background.js contentScript.js temp_zip_dir/
-        cp -r icons temp_zip_dir/
-        # Create zip from the temp directory (now all files will be at root)
-        cd temp_zip_dir
-        zip -r ../build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip .
-        # Clean up
-        cd ..
-        rm -rf temp_zip_dir
+        echo "Current version: $CURRENT_VERSION"
 
     - name: Upload Extension Package
       uses: actions/upload-artifact@v4
       with:
-        name: sticky-notes-v${{ steps.version.outputs.new_version }}
-        path: build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip
+        name: sticky-notes-v${{ steps.version.outputs.current_version }}
+        path: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
         retention-days: 7
 
-    - name: Create version tag
+    - name: Bump version and tag
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       run: |
+        CURRENT_VERSION=${{ steps.version.outputs.current_version }}
+        IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+        MAJOR=${VERSION_PARTS[0]}
+        MINOR=${VERSION_PARTS[1]}
+        PATCH=${VERSION_PARTS[2]}
+        NEW_PATCH=$((PATCH + 1))
+        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+
+        # Update manifest.json with new version
+        sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" manifest.json
+
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add manifest.json
-        git commit -m "Bump version to ${{ steps.version.outputs.new_version }}"
-        git tag -a v${{ steps.version.outputs.new_version }} -m "Version ${{ steps.version.outputs.new_version }}"
+        git commit -m "Bump version to $NEW_VERSION"
+        git tag -a "v$NEW_VERSION" -m "Version $NEW_VERSION"
         git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${GITHUB_REF#refs/heads/}
-        git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" v${{ steps.version.outputs.new_version }}
+        git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "v$NEW_VERSION"
 
     - name: Create GitHub Release
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v${{ steps.version.outputs.new_version }}
-        name: v${{ steps.version.outputs.new_version }}
+        tag_name: v${{ steps.version.outputs.current_version }}
+        name: v${{ steps.version.outputs.current_version }}
         body: |
-          Sticky Notes Chrome Extension v${{ steps.version.outputs.new_version }}
-          
+          Sticky Notes Chrome Extension v${{ steps.version.outputs.current_version }}
+
           Release date: ${{ steps.date.outputs.date }}
-          
-        files: build/sticky-notes-v${{ steps.version.outputs.new_version }}.zip
+        files: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
         draft: false
         prerelease: false
       env:
