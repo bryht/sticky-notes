@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sticky Notes — Browser Extension</title>
+  <meta name="description" content="Create, manage, and organize sticky notes on any webpage. Dark mode, colors, resize, export/import, and more. Free & open source.">
+  <meta property="og:title" content="Sticky Notes — Browser Extension">
+  <meta property="og:description" content="Create, manage, and organize sticky notes on any webpage. Free & open source.">
+  <meta property="og:image" content="https://bryht.github.io/sticky-notes/og-image.png">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect x='10' y='10' width='90' height='108' rx='4' fill='%23FFEB3B' stroke='%23F9A825' stroke-width='2'/></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="sticky-note float-note note-yellow" style="--delay: 0s; --x: 8%; --y: 15%;"><span>Remember to<br>call Mom</span></div>
+      <div class="sticky-note float-note note-pink" style="--delay: 1.2s; --x: 75%; --y: 10%;"><span>Meeting @ 3pm</span></div>
+      <div class="sticky-note float-note note-blue" style="--delay: 0.6s; --x: 60%; --y: 55%;"><span>Buy groceries 🛒</span></div>
+      <div class="sticky-note float-note note-green" style="--delay: 1.8s; --x: 15%; --y: 60%;"><span>Idea: blog post<br>about UX</span></div>
+      <div class="sticky-note float-note note-purple" style="--delay: 2.4s; --x: 85%; --y: 45%;"><span>Read chapter 5</span></div>
+    </div>
+    <div class="container hero-content">
+      <div class="logo-title">
+        <img src="icon.svg" alt="Sticky Notes" class="logo" width="128" height="128">
+        <h1>Sticky Notes</h1>
+        <p class="tagline">Stick your thoughts <em>anywhere</em> on the web</p>
+      </div>
+      <div class="hero-actions">
+        <a href="https://chrome.google.com/webstore/detail/sticky-notes/TODO" class="btn btn-primary" id="install-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L12 14M12 14L8 10M12 14L16 10"/><path d="M4 14L4 18C4 19.1 4.9 20 6 20L18 20C19.1 20 20 19.1 20 18L20 14"/></svg>
+          Install for Chrome
+        </a>
+        <a href="https://github.com/bryht/sticky-notes" class="btn btn-secondary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.37 1.23-3.21-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.21 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+      <p class="hero-version">v2.1 · Open Source · MIT License</p>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="container">
+      <h2>Everything you need, nothing you don't</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🎨</div>
+          <h3>6 Colors</h3>
+          <p>Yellow, pink, blue, green, purple, or white — pick the color that fits your mood.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">↔️</div>
+          <h3>Resize</h3>
+          <p>Drag the corner to resize any note to the perfect size.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">─</div>
+          <h3>Minimize</h3>
+          <p>Collapse notes to their header bar to save screen space. Expand when needed.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🌙</div>
+          <h3>Dark Mode</h3>
+          <p>Full dark mode palette — notes adapt automatically to your browser theme.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📤</div>
+          <h3>Export &amp; Import</h3>
+          <p>Backup all notes as JSON. Restore anytime. Never lose your thoughts.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔢</div>
+          <h3>Note Counter</h3>
+          <p>Badge on the extension icon shows how many notes you have at a glance.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📖</div>
+          <h3>Rich Text</h3>
+          <p>Bold, italic, lists, and more with the built-in formatting toolbar.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⌨️</div>
+          <h3>Keyboard Shortcuts</h3>
+          <p>Quick actions without reaching for the mouse.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>100% Private</h3>
+          <p>All notes stored locally. No servers, no tracking, no data sent anywhere.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo -->
+  <section class="demo" id="demo">
+    <div class="container">
+      <h2>See it in action</h2>
+      <div class="demo-browser">
+        <div class="browser-chrome">
+          <div class="browser-dots">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <div class="browser-bar">
+            <span class="browser-lock">🔒</span>
+            <span class="browser-url">example.com/my-project</span>
+          </div>
+        </div>
+        <div class="browser-body">
+          <p class="demo-placeholder-text">Welcome to Example.com — Your project dashboard</p>
+          <div class="demo-note demo-note-yellow" style="top: 30px; left: 20px; width: 200px;">
+            <div class="demo-note-header">📌 Tasks</div>
+            <div class="demo-note-body">
+              • Fix header bug<br>
+              • Update docs<br>
+              • Deploy v2.1
+            </div>
+          </div>
+          <div class="demo-note demo-note-pink" style="top: 80px; left: 260px; width: 180px;">
+            <div class="demo-note-header">💡 Idea</div>
+            <div class="demo-note-body">Add dark mode<br>toggle to settings</div>
+          </div>
+          <div class="demo-note demo-note-blue" style="top: 50px; left: 480px; width: 200px; min-height: 80px;">
+            <div class="demo-note-header">📞 Call</div>
+            <div class="demo-note-body">Schedule call with<br>design team</div>
+          </div>
+          <div class="demo-note demo-note-green" style="top: 170px; left: 350px; width: 160px;">
+            <div class="demo-note-header">✅ Done</div>
+            <div class="demo-note-body">Wrote unit tests</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <h2>How it works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Install</h3>
+          <p>Add Sticky Notes from the Chrome Web Store (or load unpacked for developer mode).</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Click &amp; Create</h3>
+          <p>Click the extension icon in your toolbar. A note appears instantly on the page.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Organize</h3>
+          <p>Drag to reposition, resize, minimize, pick a color. Notes auto-save as you type.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <h3>Come Back</h3>
+          <p>Notes are tied to each page URL. Revisit a site and your notes are right where you left them.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture (for devs) -->
+  <section class="architecture" id="architecture">
+    <div class="container">
+      <h2>Built for developers too</h2>
+      <p class="section-subtitle">Clean modular architecture, open source, MIT licensed</p>
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h3>📦 Modular Codebase</h3>
+          <p>v2 split one 740-line file into 7 focused modules — <code>ui.js</code>, <code>drag.js</code>, <code>storage.js</code>, <code>dashboard.js</code>, <code>features.js</code>, <code>config.js</code>, and <code>content.js</code>.</p>
+        </div>
+        <div class="arch-card">
+          <h3>🛡️ Manifest V3</h3>
+          <p>Modern Chrome Extension standard with service worker, content scripts, and strict CSP compliance.</p>
+        </div>
+        <div class="arch-card">
+          <h3>⚡ Build Pipeline</h3>
+          <p>Automated CI/CD via GitHub Actions. Bundles ES modules into a single IIFE for maximum compatibility.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="container">
+      <h2>Ready to stick your thoughts?</h2>
+      <div class="cta-actions">
+        <a href="https://chrome.google.com/webstore/detail/sticky-notes/TODO" class="btn btn-primary btn-lg" id="install-btn-bottom">
+          Install for Chrome — It's Free
+        </a>
+        <a href="https://github.com/bryht/sticky-notes" class="btn btn-secondary btn-lg">
+          ⭐ Star on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>
+        <img src="icon.svg" alt="" width="24" height="24" style="vertical-align: middle;">
+        Sticky Notes v2.1 · 
+        <a href="https://github.com/bryht/sticky-notes">GitHub</a> · 
+        <a href="https://github.com/bryht/sticky-notes/blob/main/LICENSE">MIT License</a> · 
+        Built with ❤️ using Manifest V3
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // Simple scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.feature-card, .step, .arch-card, .demo-browser').forEach(el => {
+      el.classList.add('reveal');
+      observer.observe(el);
+    });
+
+    // Hide install button if not Chrome
+    const isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
+    document.querySelectorAll('#install-btn, #install-btn-bottom').forEach(btn => {
+      if (!isChrome) {
+        btn.textContent = 'View in Chrome Web Store';
+      }
+    });
+  </script>
+</body>
+</html>
