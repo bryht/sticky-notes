@@ -212,7 +212,7 @@ async function saveSiteDefault(note, colorKey) {
     const updates = {};
     if (colorKey) updates.color = colorKey;
     if (note.style.width) updates.width = note.style.width;
-    if (note.style.minHeight) updates.minHeight = note.style.minHeight;
+    if (note.style.height) updates.minHeight = note.style.height;
     if (Object.keys(updates).length > 0) {
       await setSiteDefaults(hostname, updates);
     }
@@ -242,5 +242,6 @@ export function updateNoteColor(note, colorKey) {
     note.querySelector('.note-header').style.backgroundColor = lightColors.header;
   }
 
+  saveSiteDefault(note, colorKey);
   saveNotes();
 }

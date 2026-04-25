@@ -83,6 +83,13 @@ export function showColorPicker(note) {
   const isDark = document.getElementById('sticky-notes-container')?.classList.contains('dark-mode') || false;
   const colorMap = isDark ? DARK_NOTE_COLORS : NOTE_COLORS;
   
+  // Self-cleaning: remove picker and document listener together
+  let onOutsideClick = null;
+  const cleanup = () => {
+    picker.remove();
+    if (onOutsideClick) document.removeEventListener('click', onOutsideClick);
+  };
+
   Object.entries(colorMap).forEach(([key, colors]) => {
     const swatch = document.createElement('div');
     swatch.className = 'color-swatch';
@@ -90,20 +97,19 @@ export function showColorPicker(note) {
     swatch.title = key;
     swatch.addEventListener('click', () => {
       updateNoteColor(note, key);
-      picker.remove();
+      cleanup();
     });
     picker.appendChild(swatch);
   });
   
   // Close when clicking outside
-  const closePicker = (e) => {
+  onOutsideClick = (e) => {
     if (!picker.contains(e.target) && !note.querySelector('.note-header').contains(e.target)) {
-      picker.remove();
-      document.removeEventListener('click', closePicker);
+      cleanup();
     }
   };
-  document.addEventListener('click', closePicker);
   
+  document.addEventListener('click', onOutsideClick);
   note.appendChild(picker);
 }
 

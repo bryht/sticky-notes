@@ -17,8 +17,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Sticky Notes",
-    "default_popup": ""
+    "default_title": "Sticky Notes"
   },
   "content_scripts": [
     {

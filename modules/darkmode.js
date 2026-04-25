@@ -1,3 +1,5 @@
+import { DARK_NOTE_COLORS } from './config.js';
+
 // Dark Mode for Sticky Notes
 // Auto-detects system preference, with manual toggle in dashboard
 // Stores preference in chrome.storage.local
@@ -55,13 +57,3 @@ function applyDarkMode() {
     document.body.classList.remove('sticky-notes-dark');
   }
 }
-
-// Dark mode color palette for notes
-export const DARK_NOTE_COLORS = {
-  yellow: { bg: '#3e3a1a', header: '#5c5420' },
-  pink:   { bg: '#3e1a26', header: '#5c2030' },
-  blue:   { bg: '#1a2e3e', header: '#204060' },
-  green:  { bg: '#1a3e20', header: '#205c2e' },
-  purple: { bg: '#2e1a3e', header: '#40205c' },
-  white:  { bg: '#2a2a2a', header: '#3a3a3a' },
-};
