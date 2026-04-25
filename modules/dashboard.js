@@ -61,6 +61,7 @@ export function showAllNotesDashboard() {
   searchInput.placeholder = 'Search notes...';
   searchInput.addEventListener('input', (e) => {
     currentSearchFilter = e.target.value.toLowerCase();
+    selectedRowIndex = -1;
     filterNotes();
   });
   const clearBtn = document.createElement('button');

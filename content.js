@@ -3,7 +3,7 @@
 
 import { createNotesContainer, createNote, setActiveContainer } from './modules/ui.js';
 import { initDragCleanup } from './modules/drag.js';
-import { loadNotes, migrateStorage } from './modules/storage.js';
+import { loadNotes } from './modules/storage.js';
 import { initKeyboardShortcuts } from './modules/keyboard.js';
 import { initRichTextToolbar } from './modules/richtext.js';
 import { initDarkMode } from './modules/darkmode.js';
@@ -14,9 +14,8 @@ import { getSiteDefaults } from './modules/config.js';
 let notesContainer = null;
 
 async function init() {
-  // Run storage migrations first
-  migrateStorage();
-
+  // Storage migration is handled by background.js on install/update
+  
   notesContainer = createNotesContainer();
   setActiveContainer(notesContainer);
 
@@ -45,12 +44,6 @@ async function init() {
       return true;
     }
   );
-  
-  // Inject external stylesheet
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = chrome.runtime.getURL('styles.css');
-  document.head.appendChild(link);
 }
 
 // Start the extension with error boundary
