@@ -89,7 +89,7 @@ jobs:
     # ── Publish to Chrome Web Store ──
     - name: Publish to Chrome Web Store
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-      uses: mnao305/chrome-extension-upload@v5
+      uses: mnao305/chrome-extension-upload@v5.0.0
       with:
         file-path: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
         extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
