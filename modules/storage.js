@@ -31,9 +31,10 @@ export function saveNotes() {
   const currentPageNotes = [];
   notes.forEach(note => {
     const contentEl = note.querySelector('.note-content');
+    const rawContent = contentEl ? contentEl.innerHTML : '';
     const noteData = {
       id: note.id,
-      content: contentEl ? contentEl.innerHTML : '',
+      content: rawContent,
       position: {
         top: note.style.top,
         left: note.style.left
@@ -57,6 +58,18 @@ export function saveNotes() {
     url: currentUrl,
     notes: currentPageNotes
   }).catch(err => console.warn('Save failed:', err));
+}
+
+/**
+ * Save a single note incrementally (avoids race condition from full-page save).
+ * The background script merges this note into storage without wiping other notes.
+ */
+export function saveSingleNote(noteId, noteData) {
+  return sendMessage({
+    action: 'saveSingleNote',
+    noteId: noteId,
+    noteData: noteData
+  }).catch(err => console.warn('Single note save failed:', err));
 }
 
 export function loadNotes() {

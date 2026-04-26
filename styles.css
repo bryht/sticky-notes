@@ -31,17 +31,17 @@
   transition: box-shadow 0.2s ease, transform 0.1s ease;
 }
 
-.shaky-note:hover {
+.sticky-note:hover {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
 }
 
 /* Pinned note */
-.shaky-note.note-pinned {
+.sticky-note.note-pinned {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   border: 2px solid #ff9800;
 }
 
-.shaky-note.note-pinned::after {
+.sticky-note.note-pinned::after {
   content: '';
   position: absolute;
   top: -2px;
@@ -60,7 +60,7 @@
   50% { box-shadow: 0 0 0 6px rgba(33, 150, 243, 0.6); }
 }
 
-.shaky-note.note-highlight {
+.sticky-note.note-highlight {
   animation: noteHighlightPulse 0.5s ease 3;
 }
 
@@ -517,7 +517,7 @@
 }
 
 /* Minimized state */
-.shaky-note[data-minimized="true"] {
+.sticky-note[data-minimized="true"] {
   min-height: 32px !important;
 }
 
@@ -676,3 +676,47 @@
 body.sticky-notes-dark .dashboard-close {
   color: #f06292;
 }
+
+/* Toast notifications (replaces alert()) */
+.sticky-notes-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  animation: toast-slide-in 0.3s ease;
+}
+.sticky-notes-toast-info { background: #e3f2fd; color: #1565c0; }
+.sticky-notes-toast-success { background: #e8f5e9; color: #2e7d32; }
+.sticky-notes-toast-error { background: #ffebee; color: #c62828; }
+.sticky-notes-toast-warning { background: #fff8e1; color: #e65100; }
+.sticky-notes-toast-fade-out { opacity: 0; transform: translateY(10px); }
+.sticky-notes-toast .toast-icon { font-size: 16px; }
+.sticky-notes-toast .toast-message { flex: 1; }
+.sticky-notes-toast .toast-dismiss {
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 14px;
+  opacity: 0.6;
+  padding: 0 2px;
+}
+.sticky-notes-toast .toast-dismiss:hover { opacity: 1; }
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dark mode toast styles */
+body.sticky-notes-dark .sticky-notes-toast-info { background: #1a2e3e; color: #80cbc4; }
+body.sticky-notes-dark .sticky-notes-toast-success { background: #1a3e20; color: #a5d6a7; }
+body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #ef9a9a; }
+body.sticky-notes-dark .sticky-notes-toast-warning { background: #3e3a1a; color: #ffe082; }

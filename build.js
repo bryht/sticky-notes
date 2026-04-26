@@ -16,7 +16,7 @@ const BUILD_DIR = path.join(ROOT, 'build');
 const TEMP_DIR = path.join(ROOT, 'temp_zip_dir');
 
 // Module load order (dependency order — config first, then dependents)
-const MODULES = ['config', 'storage', 'drag', 'features', 'dashboard', 'ui', 'keyboard', 'richtext', 'darkmode', 'markdown', 'error'];
+const MODULES = ['config', 'storage', 'drag', 'features', 'dashboard', 'ui', 'keyboard', 'richtext', 'darkmode', 'markdown', 'error', 'sanitizer'];
 
 function bundleContentScript() {
   console.log('🔨 Bundling ES modules into contentScript.js...\n');

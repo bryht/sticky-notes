@@ -1,4 +1,4 @@
-build/
 node_modules/
+build/
 temp_zip_dir/
 *.zip

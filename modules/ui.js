@@ -4,6 +4,7 @@ import { saveNotes, debouncedSave } from './storage.js';
 import { showAllNotesDashboard } from './dashboard.js';
 import { minimizeNote, restoreNote, addResizeHandle, showColorPicker, exportNotes, importNotes } from './features.js';
 import { isMarkdownEnabled, setMarkdownState } from './markdown.js';
+import { sanitizeHTML } from './sanitizer.js';
 
 let activeContainer = null;
 let noteCounter = 0;
@@ -159,7 +160,7 @@ export function createNote(content = '', position = null, id = null, options = {
   const contentArea = document.createElement('div');
   contentArea.className = 'note-content';
   contentArea.contentEditable = true;
-  contentArea.innerHTML = content;
+  contentArea.innerHTML = sanitizeHTML(content);
   contentArea.addEventListener('input', debouncedSave);
 
   // On resize, save per-site defaults  
@@ -220,8 +221,10 @@ async function saveSiteDefault(note, colorKey) {
 }
 
 export function deleteNoteElement(note) {
-  // Clean up listeners
-  const clone = note.cloneNode(true);
+  // Properly clean up: remove the element, its listeners are GC'd with it
+  // (cloneNode was a no-op for listener cleanup — cloned nodes don't carry listeners)
+  // Dispatch a custom event so other modules can clean up
+  note.dispatchEvent(new CustomEvent('note-destroying', { bubbles: true }));
   note.remove();
   saveNotes();
 }

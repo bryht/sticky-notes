@@ -116,6 +116,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }).catch(err => sendResponse({ notes: [], error: err.message }));
         return true;
         
+      case 'saveSingleNote':
+        saveSingleNote(request.noteId, request.noteData).then(() => {
+          updateBadge();
+          sendResponse({ success: true });
+        }).catch(err => sendResponse({ success: false, error: err.message }));
+        return true;
+        
       case 'deleteNote':
         deleteNote(request.noteId, request.url).then(() => {
           updateBadge();
@@ -136,7 +143,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
         
       case 'importNotes':
-        importNotes(request.data).then(() => {
+        importNotes(request.data, request.mode || 'replace').then(() => {
           updateBadge();
           sendResponse({ success: true });
         }).catch(err => sendResponse({ success: false, error: err.message }));
@@ -197,6 +204,24 @@ async function saveNotes(url, notes) {
   await set({ allNotes, urlIndex });
 }
 
+// Incremental single-note save (avoids race condition from full-page replacement)
+async function saveSingleNote(noteId, noteData) {
+  const result = await get(null, ['allNotes', 'urlIndex']);
+  const allNotes = result.allNotes || {};
+  const urlIndex = result.urlIndex || {};
+  
+  const url = noteData.url;
+  
+  allNotes[noteId] = noteData;
+  
+  if (!urlIndex[url]) urlIndex[url] = [];
+  if (!urlIndex[url].includes(noteId)) {
+    urlIndex[url].push(noteId);
+  }
+  
+  await set({ allNotes, urlIndex });
+}
+
 async function getNotes(url) {
   const result = await get(url, ['allNotes', 'urlIndex']);
   const allNotes = result.allNotes || {};
@@ -230,20 +255,30 @@ async function deleteNote(noteId, url) {
   await set({ allNotes, urlIndex });
 }
 
-async function importNotes(data) {
-  await set({
-    allNotes: {},
-    urlIndex: {}
-  });
+async function importNotes(data, mode = 'replace') {
+  if (mode === 'replace') {
+    await set({
+      allNotes: {},
+      urlIndex: {}
+    });
+  }
   
-  // Rebuild from imported notes
-  const allNotes = {};
-  const urlIndex = {};
+  const result = mode === 'merge' ? await get(null, ['allNotes', 'urlIndex']) : { allNotes: {}, urlIndex: {} };
+  const allNotes = result.allNotes || {};
+  const urlIndex = result.urlIndex || {};
   
   data.notes.forEach(note => {
-    allNotes[note.id] = note;
+    // In merge mode, deduplicate IDs by appending suffix if collision exists
+    let noteId = note.id;
+    if (mode === 'merge' && allNotes[noteId]) {
+      noteId = noteId + '-imported';
+      note.id = noteId;
+    }
+    allNotes[noteId] = note;
     if (!urlIndex[note.url]) urlIndex[note.url] = [];
-    urlIndex[note.url].push(note.id);
+    if (!urlIndex[note.url].includes(noteId)) {
+      urlIndex[note.url].push(noteId);
+    }
   });
   
   await set({ allNotes, urlIndex });
