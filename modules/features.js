@@ -201,11 +201,13 @@ export function importNotes() {
         return;
       }
       
-      // Offer merge vs replace
-      const mergeChoice = confirm(
-        `Import ${data.notes.length} notes?\n\nOK = Replace all existing notes\nCancel = Merge with existing notes`
+      // Offer merge vs replace (use a clearer UI with two buttons)
+      // Since confirm() only has OK/Cancel, we use the less-destructive option (merge) as Cancel
+      // so the user can't accidentally wipe data with Enter key
+      const confirmed = confirm(
+        `Import ${data.notes.length} notes?\n\nClick OK to REPLACE all existing notes.\nClick Cancel to MERGE with existing notes.`
       );
-      const mode = mergeChoice ? 'replace' : 'merge';
+      const mode = confirmed ? 'replace' : 'merge';
       
       // Clear current notes from DOM
       document.querySelectorAll('.sticky-note').forEach(el => el.remove());

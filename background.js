@@ -268,10 +268,16 @@ async function importNotes(data, mode = 'replace') {
   const urlIndex = result.urlIndex || {};
   
   data.notes.forEach(note => {
-    allNotes[note.id] = note;
+    // In merge mode, deduplicate IDs by appending suffix if collision exists
+    let noteId = note.id;
+    if (mode === 'merge' && allNotes[noteId]) {
+      noteId = noteId + '-imported';
+      note.id = noteId;
+    }
+    allNotes[noteId] = note;
     if (!urlIndex[note.url]) urlIndex[note.url] = [];
-    if (!urlIndex[note.url].includes(note.id)) {
-      urlIndex[note.url].push(note.id);
+    if (!urlIndex[note.url].includes(noteId)) {
+      urlIndex[note.url].push(noteId);
     }
   });
   

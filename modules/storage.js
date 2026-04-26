@@ -31,11 +31,7 @@ export function saveNotes() {
   const currentPageNotes = [];
   notes.forEach(note => {
     const contentEl = note.querySelector('.note-content');
-    // Sanitize content before saving to prevent stored XSS
     const rawContent = contentEl ? contentEl.innerHTML : '';
-    import('./sanitizer.js').then(({ sanitizeHTML }) => {
-      // Only sanitize on load - saved content is already trusted from user input
-    });
     const noteData = {
       id: note.id,
       content: rawContent,

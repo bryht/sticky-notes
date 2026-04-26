@@ -10,7 +10,8 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "eslint": "^8.56.0"
+    "eslint": "^8.56.0",
+    "linkedom": "^0.18.0"
   },
   "jest": {
     "testMatch": ["**/tests/**/*.test.js"],

@@ -714,3 +714,9 @@ body.sticky-notes-dark .dashboard-close {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Dark mode toast styles */
+body.sticky-notes-dark .sticky-notes-toast-info { background: #1a2e3e; color: #80cbc4; }
+body.sticky-notes-dark .sticky-notes-toast-success { background: #1a3e20; color: #a5d6a7; }
+body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #ef9a9a; }
+body.sticky-notes-dark .sticky-notes-toast-warning { background: #3e3a1a; color: #ffe082; }

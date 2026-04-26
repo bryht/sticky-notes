@@ -4,6 +4,7 @@ import { saveNotes, debouncedSave } from './storage.js';
 import { showAllNotesDashboard } from './dashboard.js';
 import { minimizeNote, restoreNote, addResizeHandle, showColorPicker, exportNotes, importNotes } from './features.js';
 import { isMarkdownEnabled, setMarkdownState } from './markdown.js';
+import { sanitizeHTML } from './sanitizer.js';
 
 let activeContainer = null;
 let noteCounter = 0;
@@ -159,10 +160,7 @@ export function createNote(content = '', position = null, id = null, options = {
   const contentArea = document.createElement('div');
   contentArea.className = 'note-content';
   contentArea.contentEditable = true;
-  // Sanitize content to prevent XSS from imported/tampered storage
-  import('./sanitizer.js').then(({ sanitizeHTML }) => {
-    contentArea.innerHTML = sanitizeHTML(content);
-  });
+  contentArea.innerHTML = sanitizeHTML(content);
   contentArea.addEventListener('input', debouncedSave);
 
   // On resize, save per-site defaults  

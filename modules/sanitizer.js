@@ -7,6 +7,19 @@
 const ALLOWED_TAGS = ['B', 'I', 'EM', 'STRONG', 'U', 'A', 'UL', 'OL', 'LI', 'BR', 'P', 'H1', 'H2', 'H3', 'SPAN', 'DIV'];
 const ALLOWED_ATTRS = { 'A': ['href', 'target', 'rel'], 'SPAN': ['class', 'style'], 'DIV': ['class'], 'P': ['class'] };
 
+/**
+ * Check if a URL is dangerous (javascript:, vbscript:, data: URLs with executable content).
+ * Handles case variations, whitespace padding, and encoded characters.
+ */
+function isDangerousURL(url) {
+  if (!url) return false;
+  // Strip whitespace and null bytes, then lowercase for comparison
+  const stripped = url.replace(/[\s\x00]+/g, '').toLowerCase();
+  return stripped.startsWith('javascript:') ||
+         stripped.startsWith('vbscript:') ||
+         stripped.startsWith('data:text/html');
+}
+
 export function sanitizeHTML(html) {
   if (!html) return '';
   const parser = new DOMParser();
@@ -18,8 +31,8 @@ export function sanitizeHTML(html) {
       const child = node.childNodes[i];
       if (child.nodeType === Node.ELEMENT_NODE) {
         if (!ALLOWED_TAGS.includes(child.tagName)) {
-          // Replace disallowed tag with its text content
-          child.replaceWith(...child.childNodes);
+          // Remove disallowed tag entirely (don't hoist children — prevents nested payloads)
+          child.remove();
         } else {
           // Strip disallowed attributes
           const allowedForTag = ALLOWED_ATTRS[child.tagName] || [];
@@ -28,11 +41,17 @@ export function sanitizeHTML(html) {
               child.removeAttribute(child.attributes[j].name);
             }
           }
-          // Sanitize href to prevent javascript: URLs
+          // Sanitize href to prevent javascript: URLs (case-insensitive, whitespace-resistant)
           if (child.tagName === 'A' && child.getAttribute('href')) {
-            const href = child.getAttribute('href');
-            if (href.trim().toLowerCase().startsWith('javascript:')) {
+            if (isDangerousURL(child.getAttribute('href'))) {
               child.removeAttribute('href');
+            }
+          }
+          // Also check style attributes for expression/url attacks
+          if (child.hasAttribute('style')) {
+            const style = child.getAttribute('style');
+            if (/url\s*\(|expression\s*\(|javascript:/i.test(style)) {
+              child.removeAttribute('style');
             }
           }
           cleanNode(child);
