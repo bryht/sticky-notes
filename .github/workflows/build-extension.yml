@@ -66,14 +66,23 @@ jobs:
           fs.writeFileSync('manifest.json', JSON.stringify(m, null, 2) + '\n');
         "
 
+        # Check if tag already exists (from a previous failed run) and delete it
+        if git tag -l "v$NEW_VERSION" | grep -q .; then
+          echo "Tag v$NEW_VERSION already exists locally, deleting..."
+          git tag -d "v$NEW_VERSION"
+        fi
+        
         # Commit, tag, and push
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add manifest.json
         git commit -m "Bump version to $NEW_VERSION"
         git tag -a "v$NEW_VERSION" -m "Version $NEW_VERSION"
-        git push origin HEAD:${{ github.ref_name }}
-        git push origin "v$NEW_VERSION"
+        
+        # Push commit to main (force to overwrite any previous failed bump)
+        git push --force-with-lease origin HEAD:${{ github.ref_name }}
+        # Push tag (force in case a stale tag exists from a previous run)
+        git push --force origin "v$NEW_VERSION"
 
     - name: Create GitHub Release
       if: github.event_name == 'push'
