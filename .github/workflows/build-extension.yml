@@ -30,11 +30,12 @@ jobs:
         npm install -g eslint
         npx eslint modules/ background.js content.js --rule 'no-undef: off' --rule 'no-unused-vars: off' || true
 
-    # ── Version bump FIRST (only on push to main) ──
+    # ── Version bump FIRST (only on push to main, not PRs) ──
     - name: Bump version
       if: github.event_name == 'push'
       id: bump
       run: |
+        git pull --rebase origin ${{ github.ref_name }}
         CURRENT_VERSION=$(grep -oP '"version": "\K[^"]+' manifest.json)
         IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
         NEW_PATCH=$((PATCH + 1))
@@ -42,6 +43,13 @@ jobs:
         sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" manifest.json
         echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
         echo "Bumped $CURRENT_VERSION → $NEW_VERSION"
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add manifest.json
+        git commit -m "Bump version to $NEW_VERSION"
+        git tag -a "v$NEW_VERSION" -m "Version $NEW_VERSION"
+        git push origin ${{ github.ref_name }}
+        git push origin "v$NEW_VERSION"
 
     # ── Build AFTER bump (so artifact has correct version) ──
     - name: Build extension
@@ -60,19 +68,6 @@ jobs:
         name: sticky-notes-v${{ steps.version.outputs.current_version }}
         path: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
         retention-days: 7
-
-    # ── Tag & Release (uses the NEW version) ──
-    - name: Commit bump and tag
-      if: github.event_name == 'push'
-      run: |
-        VERSION=${{ steps.version.outputs.current_version }}
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add manifest.json
-        git commit -m "Bump version to $VERSION"
-        git tag -a "v$VERSION" -m "Version $VERSION"
-        git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${GITHUB_REF#refs/heads/}
-        git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "v$VERSION"
 
     - name: Create GitHub Release
       if: github.event_name == 'push'
