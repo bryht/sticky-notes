@@ -2,6 +2,7 @@ import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
 import { updateNoteColor, createNote } from './ui.js';
 import { getAllNotes, saveNotes, debouncedSave } from './storage.js';
 import { showAllNotesDashboard } from './dashboard.js';
+import { showToast } from './error.js';
 
 // ===================
 // Minimize / Restore
@@ -140,8 +141,39 @@ export async function exportNotes() {
     chrome.runtime.sendMessage({ action: 'updateBadge', count: notes.length });
   } catch (err) {
     console.error('Export failed:', err);
-    alert('Export failed. See console for details.');
+    showToast('Export failed. See console for details.', 'error');
   }
+}
+
+/**
+ * Validate imported data schema: check structure, note count, field sizes.
+ * Returns { valid: boolean, error?: string }
+ */
+function validateImportData(data) {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Data is not an object' };
+  }
+  if (!Array.isArray(data.notes)) {
+    return { valid: false, error: 'notes field is missing or not an array' };
+  }
+  if (data.notes.length > 10000) {
+    return { valid: false, error: 'Too many notes (max 10,000)' };
+  }
+  for (let i = 0; i < data.notes.length; i++) {
+    const note = data.notes[i];
+    if (!note.id || typeof note.id !== 'string') {
+      return { valid: false, error: `Note ${i}: missing or invalid id` };
+    }
+    if (note.content && typeof note.content === 'string' && note.content.length > 50000) {
+      return { valid: false, error: `Note ${i}: content exceeds 50KB limit` };
+    }
+    if (note.url && typeof note.url === 'string') {
+      try { new URL(note.url); } catch(e) {
+        return { valid: false, error: `Note ${i}: invalid URL` };
+      }
+    }
+  }
+  return { valid: true };
 }
 
 export function importNotes() {
@@ -158,20 +190,32 @@ export function importNotes() {
       const data = JSON.parse(text);
       
       if (!data.notes || !Array.isArray(data.notes)) {
-        alert('Invalid backup file format');
+        showToast('Invalid backup file format', 'error');
         return;
       }
       
-      if (!confirm(`Import ${data.notes.length} notes? This will replace existing notes.`)) return;
+      // Validate import schema
+      const validation = validateImportData(data);
+      if (!validation.valid) {
+        showToast('Invalid import: ' + validation.error, 'error');
+        return;
+      }
+      
+      // Offer merge vs replace
+      const mergeChoice = confirm(
+        `Import ${data.notes.length} notes?\n\nOK = Replace all existing notes\nCancel = Merge with existing notes`
+      );
+      const mode = mergeChoice ? 'replace' : 'merge';
       
       // Clear current notes from DOM
       document.querySelectorAll('.sticky-note').forEach(el => el.remove());
       
-      // Send to background to replace storage
+      // Send to background with merge mode
       await new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({
           action: 'importNotes',
-          data: data
+          data: data,
+          mode: mode
         }, (response) => {
           if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
           else resolve(response);
@@ -200,10 +244,10 @@ export function importNotes() {
         showAllNotesDashboard();
       }
       
-      alert(`Successfully imported ${data.notes.length} notes!`);
+      showToast(`Successfully imported ${data.notes.length} notes!`, 'success');
     } catch (err) {
       console.error('Import failed:', err);
-      alert('Import failed: ' + err.message);
+      showToast('Import failed: ' + err.message, 'error');
     }
   });
   

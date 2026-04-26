@@ -50,7 +50,7 @@ A powerful browser extension for creating, managing, and organizing sticky notes
 - Import notes from JSON backup
 - Delete unwanted notes
 - Simple and intuitive interface
-- Cross-browser compatibility (Chrome, Edge, Firefox)
+- Cross-browser compatibility (Chrome, Edge; Firefox requires Manifest V2 adaptation)
 - Note count badge on extension icon
 
 ## Installation
@@ -126,7 +126,7 @@ sticky-notes/
 This extension is designed to work with:
 - Google Chrome (v88+)
 - Microsoft Edge (v88+)
-- Firefox (with minor adjustments)
+- Firefox (requires Manifest V2 port — see CONTRIBUTING.md)
 
 ## Changelog
 

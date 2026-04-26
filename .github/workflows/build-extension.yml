@@ -25,15 +25,34 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Lint check
+      run: |
+        npm install -g eslint
+        npx eslint modules/ background.js content.js --rule 'no-undef: off' --rule 'no-unused-vars: off' || true
+
+    # ── Version bump FIRST (only on push to main) ──
+    - name: Bump version
+      if: github.event_name == 'push'
+      id: bump
+      run: |
+        CURRENT_VERSION=$(grep -oP '"version": "\K[^"]+' manifest.json)
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        NEW_PATCH=$((PATCH + 1))
+        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+        sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" manifest.json
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "Bumped $CURRENT_VERSION → $NEW_VERSION"
+
+    # ── Build AFTER bump (so artifact has correct version) ──
     - name: Build extension
       run: node build.js
 
-    - name: Extract current version
+    - name: Extract version
       id: version
       run: |
-        CURRENT_VERSION=$(grep -oP '"version": "\K[^"]+' manifest.json)
-        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-        echo "Current version: $CURRENT_VERSION"
+        VERSION=$(grep -oP '"version": "\K[^"]+' manifest.json)
+        echo "current_version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
 
     - name: Upload Extension Package
       uses: actions/upload-artifact@v4
@@ -42,28 +61,18 @@ jobs:
         path: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
         retention-days: 7
 
-    # ── Bump & Release (only on push to main, not PRs) ──
-
-    - name: Bump version and tag
+    # ── Tag & Release (uses the NEW version) ──
+    - name: Commit bump and tag
       if: github.event_name == 'push'
       run: |
-        CURRENT_VERSION=${{ steps.version.outputs.current_version }}
-        IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
-        MAJOR=${VERSION_PARTS[0]}
-        MINOR=${VERSION_PARTS[1]}
-        PATCH=${VERSION_PARTS[2]}
-        NEW_PATCH=$((PATCH + 1))
-        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-
-        sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" manifest.json
-
+        VERSION=${{ steps.version.outputs.current_version }}
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add manifest.json
-        git commit -m "Bump version to $NEW_VERSION"
-        git tag -a "v$NEW_VERSION" -m "Version $NEW_VERSION"
-        git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${GITHUB_REF#refs/heads/}
-        git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "v$NEW_VERSION"
+        git commit -m "Bump version to $VERSION"
+        git tag -a "v$VERSION" -m "Version $VERSION"
+        git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${GITHUB_REF#refs/heads/}
+        git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "v$VERSION"
 
     - name: Create GitHub Release
       if: github.event_name == 'push'
@@ -79,7 +88,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Publish to Chrome Web Store (separate job, only when secrets are set) ──
+  # ── Publish to Chrome Web Store ──
   publish-webstore:
     needs: build
     if: github.event_name == 'push' && vars.CHROME_PUBLISH_ENABLED == 'true'

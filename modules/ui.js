@@ -159,7 +159,10 @@ export function createNote(content = '', position = null, id = null, options = {
   const contentArea = document.createElement('div');
   contentArea.className = 'note-content';
   contentArea.contentEditable = true;
-  contentArea.innerHTML = content;
+  // Sanitize content to prevent XSS from imported/tampered storage
+  import('./sanitizer.js').then(({ sanitizeHTML }) => {
+    contentArea.innerHTML = sanitizeHTML(content);
+  });
   contentArea.addEventListener('input', debouncedSave);
 
   // On resize, save per-site defaults  
@@ -220,8 +223,10 @@ async function saveSiteDefault(note, colorKey) {
 }
 
 export function deleteNoteElement(note) {
-  // Clean up listeners
-  const clone = note.cloneNode(true);
+  // Properly clean up: remove the element, its listeners are GC'd with it
+  // (cloneNode was a no-op for listener cleanup — cloned nodes don't carry listeners)
+  // Dispatch a custom event so other modules can clean up
+  note.dispatchEvent(new CustomEvent('note-destroying', { bubbles: true }));
   note.remove();
   saveNotes();
 }
