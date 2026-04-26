@@ -30,35 +30,13 @@ jobs:
         npm install -g eslint
         npx eslint modules/ background.js content.js --rule 'no-undef: off' --rule 'no-unused-vars: off' || true
 
-    # ── Version bump FIRST (only on push to main, not PRs) ──
-    - name: Bump version
-      if: github.event_name == 'push'
-      id: bump
-      run: |
-        git pull --rebase origin ${{ github.ref_name }}
-        CURRENT_VERSION=$(grep -oP '"version": "\K[^"]+' manifest.json)
-        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-        NEW_PATCH=$((PATCH + 1))
-        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-        sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" manifest.json
-        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-        echo "Bumped $CURRENT_VERSION → $NEW_VERSION"
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add manifest.json
-        git commit -m "Bump version to $NEW_VERSION"
-        git tag -a "v$NEW_VERSION" -m "Version $NEW_VERSION"
-        git push origin ${{ github.ref_name }}
-        git push origin "v$NEW_VERSION"
-
-    # ── Build AFTER bump (so artifact has correct version) ──
     - name: Build extension
       run: node build.js
 
     - name: Extract version
       id: version
       run: |
-        VERSION=$(grep -oP '"version": "\K[^"]+' manifest.json)
+        VERSION=$(node -p "require('./manifest.json').version")
         echo "current_version=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
 
@@ -69,14 +47,42 @@ jobs:
         path: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
         retention-days: 7
 
+    # ── Bump, tag, and release (only on push to main) ──
+    - name: Bump version and tag
+      if: github.event_name == 'push'
+      id: bump
+      run: |
+        CURRENT_VERSION=${{ steps.version.outputs.current_version }}
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        NEW_PATCH=$((PATCH + 1))
+        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+        # Update manifest.json with new version
+        node -e "
+          const fs = require('fs');
+          const m = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+          m.version = '$NEW_VERSION';
+          fs.writeFileSync('manifest.json', JSON.stringify(m, null, 2) + '\n');
+        "
+
+        # Commit, tag, and push
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add manifest.json
+        git commit -m "Bump version to $NEW_VERSION"
+        git tag -a "v$NEW_VERSION" -m "Version $NEW_VERSION"
+        git push origin HEAD:${{ github.ref_name }}
+        git push origin "v$NEW_VERSION"
+
     - name: Create GitHub Release
       if: github.event_name == 'push'
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v${{ steps.version.outputs.current_version }}
-        name: v${{ steps.version.outputs.current_version }}
+        tag_name: v${{ steps.bump.outputs.new_version }}
+        name: v${{ steps.bump.outputs.new_version }}
         body: |
-          Sticky Notes Chrome Extension v${{ steps.version.outputs.current_version }}
+          Sticky Notes Chrome Extension v${{ steps.bump.outputs.new_version }}
         files: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
         draft: false
         prerelease: false
@@ -105,7 +111,7 @@ jobs:
     - name: Extract current version
       id: version
       run: |
-        CURRENT_VERSION=$(grep -oP '"version": "\K[^"]+' manifest.json)
+        CURRENT_VERSION=$(node -p "require('./manifest.json').version")
         echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
     - name: Publish to Chrome Web Store
