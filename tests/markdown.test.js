@@ -1,29 +1,25 @@
 /**
  * Tests for the markdown parser module
+ * DOMParser, Node, and document are set up in tests/setup.js via linkedom
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// Read markdown.js and convert ES exports for Node
 const mdSource = fs.readFileSync(
   path.join(__dirname, '..', 'modules', 'markdown.js'),
   'utf8'
 );
 
-// Extract parseMarkdown by converting the module
-let parseMarkdown;
 const converted = mdSource
-  .replace(/^import\s+.*?;\s*$/gm, '')        // remove imports
+  .replace(/^import\s+.*?;\s*$/gm, '')
   .replace(/^export\s+function\s+/gm, 'function ')
   .replace(/^export\s+const\s+/gm, 'const ')
   .replace(/^export\s+let\s+/gm, 'let ');
 
-// We need parseMarkdown - it's a private function, so we expose it via eval trick
-// Add a test export at the end
-const testableCode = converted + '\nreturn { parseMarkdown, escapeHtml: typeof escapeHtml !== "undefined" ? escapeHtml : null };';
+const testableCode = converted + '\nreturn { parseMarkdown };';
 const moduleExport = new Function(testableCode)();
-parseMarkdown = moduleExport.parseMarkdown;
+const parseMarkdown = moduleExport.parseMarkdown;
 
 describe('parseMarkdown', () => {
   test('returns empty string for empty input', () => {
@@ -31,28 +27,54 @@ describe('parseMarkdown', () => {
     expect(parseMarkdown(null)).toBe('');
   });
 
-  test('converts bold **text**', () => {
-    const result = parseMarkdown('hello **world** end');
-    expect(result).toContain('<strong>world</strong>');
+  test('passes through plain text', () => {
+    expect(parseMarkdown('Hello world')).toContain('Hello world');
   });
 
-  test('converts italic *text*', () => {
-    const result = parseMarkdown('hello *world* end');
-    expect(result).toContain('<em>world</em>');
-  });
-
-  test('converts headings', () => {
+  // ── Headings ──
+  test('converts # H1', () => {
     expect(parseMarkdown('# Title')).toContain('<h1>Title</h1>');
+  });
+
+  test('converts ## H2', () => {
     expect(parseMarkdown('## Subtitle')).toContain('<h2>Subtitle</h2>');
+  });
+
+  test('converts ### H3', () => {
     expect(parseMarkdown('### Section')).toContain('<h3>Section</h3>');
   });
 
-  test('converts links [text](url)', () => {
+  test('### takes precedence over ## and #', () => {
+    const result = parseMarkdown('### h3');
+    expect(result).toContain('<h3>h3</h3>');
+    expect(result).not.toContain('<h1>');
+    expect(result).not.toContain('<h2>');
+  });
+
+  // ── Bold and Italic ──
+  test('converts bold **text**', () => {
+    expect(parseMarkdown('hello **world** end')).toContain('<strong>world</strong>');
+  });
+
+  test('converts italic *text*', () => {
+    expect(parseMarkdown('hello *world* end')).toContain('<em>world</em>');
+  });
+
+  test('handles bold and italic in same line', () => {
+    const result = parseMarkdown('**bold** and *italic*');
+    expect(result).toContain('<strong>bold</strong>');
+    expect(result).toContain('<em>italic</em>');
+  });
+
+  // ── Links ──
+  test('converts [text](url)', () => {
     const result = parseMarkdown('[click](https://example.com)');
-    expect(result).toContain('<a href="https://example.com"');
+    expect(result).toContain('href="https://example.com"');
+    expect(result).toContain('target="_blank"');
     expect(result).toContain('click');
   });
 
+  // ── Lists ──
   test('converts bullet lists', () => {
     const result = parseMarkdown('- item one\n- item two');
     expect(result).toContain('<ul>');
@@ -60,20 +82,52 @@ describe('parseMarkdown', () => {
     expect(result).toContain('item one');
   });
 
+  test('single bullet list item creates list', () => {
+    const result = parseMarkdown('- solo item');
+    expect(result).toContain('<ul>');
+    expect(result).toContain('<li>');
+  });
+
+  // ── Line breaks ──
   test('converts line breaks', () => {
     const result = parseMarkdown('line1\nline2');
     expect(result).toContain('<br>');
   });
 
+  // ── XSS protection ──
   test('escapes HTML in raw text', () => {
     const result = parseMarkdown('<script>alert(1)</script>');
     expect(result).not.toContain('<script>');
   });
 
+  test('escapes img tags', () => {
+    const result = parseMarkdown('<img src=x onerror=alert(1)>');
+    expect(result).not.toContain('<img');
+  });
+
+  // ── Mixed formatting ──
   test('handles mixed formatting', () => {
     const result = parseMarkdown('# Header\n**bold** and *italic*');
     expect(result).toContain('<h1>');
     expect(result).toContain('<strong>');
     expect(result).toContain('<em>');
+  });
+
+  test('heading with bold text', () => {
+    const result = parseMarkdown('# **Important** Title');
+    expect(result).toContain('<h1>');
+    expect(result).toContain('<strong>');
+  });
+
+  // ── Edge cases ──
+  test('handles very long text', () => {
+    const longText = 'a'.repeat(10000);
+    const result = parseMarkdown(longText);
+    expect(result).toContain('a');
+  });
+
+  test('handles special characters', () => {
+    const result = parseMarkdown('price: $10 & $20');
+    expect(result).toBeDefined();
   });
 });

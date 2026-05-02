@@ -1,34 +1,14 @@
 /**
  * Tests for the JSON import validator
+ * Uses dynamic import to load the shared validation module
  */
 
-// Inline the validateImportData logic (same as in features.js)
-function validateImportData(data) {
-  if (!data || typeof data !== 'object') {
-    return { valid: false, error: 'Data is not an object' };
-  }
-  if (!Array.isArray(data.notes)) {
-    return { valid: false, error: 'notes field is missing or not an array' };
-  }
-  if (data.notes.length > 10000) {
-    return { valid: false, error: 'Too many notes (max 10,000)' };
-  }
-  for (let i = 0; i < data.notes.length; i++) {
-    const note = data.notes[i];
-    if (!note.id || typeof note.id !== 'string') {
-      return { valid: false, error: `Note ${i}: missing or invalid id` };
-    }
-    if (note.content && typeof note.content === 'string' && note.content.length > 50000) {
-      return { valid: false, error: `Note ${i}: content exceeds 50KB limit` };
-    }
-    if (note.url && typeof note.url === 'string') {
-      try { new URL(note.url); } catch(e) {
-        return { valid: false, error: `Note ${i}: invalid URL` };
-      }
-    }
-  }
-  return { valid: true };
-}
+let validateImportData;
+
+beforeAll(async () => {
+  const mod = await import('./../modules/validation.js');
+  validateImportData = mod.validateImportData;
+});
 
 describe('validateImportData', () => {
   test('rejects non-object input', () => {

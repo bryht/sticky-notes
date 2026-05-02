@@ -25,10 +25,14 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Install dependencies
+      run: npm install
+
     - name: Lint check
-      run: |
-        npm install -g eslint
-        npx eslint modules/ background.js content.js --rule 'no-undef: off' --rule 'no-unused-vars: off' || true
+      run: npm run lint
+
+    - name: Run tests
+      run: npm test
 
     - name: Build extension
       run: node build.js
@@ -115,7 +119,9 @@ jobs:
         node-version: '20'
 
     - name: Build extension
-      run: node build.js
+      run: |
+        npm install
+        node build.js
 
     - name: Extract current version
       id: version

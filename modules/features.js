@@ -2,7 +2,8 @@ import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
 import { updateNoteColor, createNote } from './ui.js';
 import { getAllNotes, saveNotes, debouncedSave } from './storage.js';
 import { showAllNotesDashboard } from './dashboard.js';
-import { showToast } from './error.js';
+import { showToast, showConfirmModal } from './error.js';
+import { validateImportData } from './validation.js';
 
 // ===================
 // Minimize / Restore
@@ -100,6 +101,19 @@ export function showColorPicker(note) {
       updateNoteColor(note, key);
       cleanup();
     });
+    // Hover preview: temporarily show this color on the note
+    const origBg = note.style.backgroundColor;
+    const origHeaderBg = note.querySelector('.note-header')?.style.backgroundColor;
+    swatch.addEventListener('mouseenter', () => {
+      note.style.backgroundColor = colors.bg;
+      const header = note.querySelector('.note-header');
+      if (header) header.style.backgroundColor = colors.header;
+    });
+    swatch.addEventListener('mouseleave', () => {
+      note.style.backgroundColor = origBg;
+      const header = note.querySelector('.note-header');
+      if (header) header.style.backgroundColor = origHeaderBg;
+    });
     picker.appendChild(swatch);
   });
   
@@ -145,36 +159,7 @@ export async function exportNotes() {
   }
 }
 
-/**
- * Validate imported data schema: check structure, note count, field sizes.
- * Returns { valid: boolean, error?: string }
- */
-function validateImportData(data) {
-  if (!data || typeof data !== 'object') {
-    return { valid: false, error: 'Data is not an object' };
-  }
-  if (!Array.isArray(data.notes)) {
-    return { valid: false, error: 'notes field is missing or not an array' };
-  }
-  if (data.notes.length > 10000) {
-    return { valid: false, error: 'Too many notes (max 10,000)' };
-  }
-  for (let i = 0; i < data.notes.length; i++) {
-    const note = data.notes[i];
-    if (!note.id || typeof note.id !== 'string') {
-      return { valid: false, error: `Note ${i}: missing or invalid id` };
-    }
-    if (note.content && typeof note.content === 'string' && note.content.length > 50000) {
-      return { valid: false, error: `Note ${i}: content exceeds 50KB limit` };
-    }
-    if (note.url && typeof note.url === 'string') {
-      try { new URL(note.url); } catch(e) {
-        return { valid: false, error: `Note ${i}: invalid URL` };
-      }
-    }
-  }
-  return { valid: true };
-}
+
 
 export function importNotes() {
   const input = document.createElement('input');
@@ -201,11 +186,15 @@ export function importNotes() {
         return;
       }
       
-      // Offer merge vs replace (use a clearer UI with two buttons)
-      // Since confirm() only has OK/Cancel, we use the less-destructive option (merge) as Cancel
-      // so the user can't accidentally wipe data with Enter key
-      const confirmed = confirm(
-        `Import ${data.notes.length} notes?\n\nClick OK to REPLACE all existing notes.\nClick Cancel to MERGE with existing notes.`
+      // Use styled modal instead of window.confirm()
+      const confirmed = await showConfirmModal(
+        `Import ${data.notes.length} notes? This will REPLACE all existing notes.`,
+        {
+          title: 'Import Notes',
+          confirmText: 'Replace All',
+          cancelText: 'Merge Instead',
+          confirmClass: 'modal-btn-danger'
+        }
       );
       const mode = confirmed ? 'replace' : 'merge';
       
