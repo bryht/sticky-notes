@@ -102,8 +102,8 @@ export function showColorPicker(note) {
       cleanup();
     });
     // Hover preview: temporarily show this color on the note
-    const origBg = note.style.backgroundColor;
-    const origHeaderBg = note.querySelector('.note-header')?.style.backgroundColor;
+    const origBg = getComputedStyle(note).backgroundColor;
+    const origHeaderBg = note.querySelector('.note-header') ? getComputedStyle(note.querySelector('.note-header')).backgroundColor : '';
     swatch.addEventListener('mouseenter', () => {
       note.style.backgroundColor = colors.bg;
       const header = note.querySelector('.note-header');

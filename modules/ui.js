@@ -60,8 +60,8 @@ export function createNote(content = '', position = null, id = null, options = {
     const vh = window.innerHeight;
     const topVal = parseInt(position.top, 10) || 0;
     const leftVal = parseInt(position.left, 10) || 0;
-    position.top = `${Math.min(topVal, Math.max(10, vw - 270))}px`;
-    position.left = `${Math.min(leftVal, Math.max(10, vh - 220))}px`;
+    position.top = `${Math.min(topVal, Math.max(10, vh - 220))}px`;
+    position.left = `${Math.min(leftVal, Math.max(10, vw - 270))}px`;
   }
   
   const colorKey = options.color || DEFAULT_NOTE.color;
@@ -250,26 +250,22 @@ async function saveSiteDefault(note, colorKey) {
 }
 
 // ── Undo-Delete System ──
-let pendingDeleteTimer = null;
-let pendingDeleteData = null;  // { note, parent }
+// Use a Map keyed by noteId so rapid consecutive deletions don't overwrite each other
+const pendingDeletes = new Map(); // noteId -> { timer, data: { note, parent, nextSibling } }
 
 /**
  * Delete a note with a 5-second undo window.
  * Shows a toast with "Undo" button; if not clicked, deletion becomes permanent.
  */
 export function deleteNoteElement(note) {
-  // If there's already a pending delete, confirm it immediately
-  if (pendingDeleteTimer) {
-    clearTimeout(pendingDeleteTimer);
-    pendingDeleteTimer = null;
-    // The previous note is already removed from DOM; just finalize its storage removal
-    pendingDeleteData = null;
-  }
+  const noteId = note.id;
+
+  // If there's already a pending delete for this same note, ignore
+  if (pendingDeletes.has(noteId)) return;
 
   // Store data needed for undo
   const parent = note.parentElement;
   const nextSibling = note.nextElementSibling;
-  pendingDeleteData = { note, parent, nextSibling };
 
   // Dispatch custom event so other modules can clean up
   note.dispatchEvent(new CustomEvent('note-destroying', { bubbles: true }));
@@ -283,7 +279,7 @@ export function deleteNoteElement(note) {
   // Show undo toast
   showToast('Note deleted', 'Undo', () => {
     // Undo: restore the note
-    if (pendingDeleteData && pendingDeleteData.note === note) {
+    if (pendingDeletes.has(noteId)) {
       note.style.display = '';
       if (nextSibling && nextSibling.parentElement === parent) {
         parent.insertBefore(note, nextSibling);
@@ -291,21 +287,21 @@ export function deleteNoteElement(note) {
         parent.appendChild(note);
       }
       saveNotes();
-      pendingDeleteData = null;
-      if (pendingDeleteTimer) clearTimeout(pendingDeleteTimer);
-      pendingDeleteTimer = null;
+      clearTimeout(pendingDeletes.get(noteId).timer);
+      pendingDeletes.delete(noteId);
     }
   });
 
   // Auto-confirm delete after 5 seconds
-  pendingDeleteTimer = setTimeout(() => {
-    if (pendingDeleteData && pendingDeleteData.note === note) {
+  const timer = setTimeout(() => {
+    if (pendingDeletes.has(noteId)) {
       // Permanently remove from DOM
       note.remove();
-      pendingDeleteData = null;
+      pendingDeletes.delete(noteId);
     }
-    pendingDeleteTimer = null;
   }, 5000);
+
+  pendingDeletes.set(noteId, { timer, data: { note, parent, nextSibling } });
 }
 
 export function updateNoteColor(note, colorKey) {

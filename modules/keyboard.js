@@ -82,7 +82,7 @@ export function initKeyboardShortcuts() {
     }
 
     // Ctrl+S → Force save all notes
-    if (e.ctrlKey && !e.shiftKey && e.key === 's') {
+    if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 's') {
       e.preventDefault();
       import('./storage.js').then(({ saveNotes }) => saveNotes());
       return;

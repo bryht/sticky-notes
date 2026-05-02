@@ -12,23 +12,25 @@ export function makeDraggable(element, handle) {
   
   function startDrag(e) {
     e.preventDefault();
-    initiateDrag(e.clientX, e.clientY);
+    const { cleanup } = initiateDrag(e.clientX, e.clientY, 'mouse');
+    // cleanup is called by onMouseUp
   }
   
   function startDragTouch(e) {
     e.preventDefault();
     if (e.touches.length !== 1) return; // Only single-finger drag
     const touch = e.touches[0];
-    initiateDrag(touch.clientX, touch.clientY);
+    // Use touch-only move/end handlers — don't add mouse listeners
+    // to avoid double-firing on hybrid devices (Surface, etc.)
+    const dragState = initiateDrag(touch.clientX, touch.clientY, 'touch');
     
-    // Use touch events for move/up
     const onTouchMove = (e) => {
       if (e.touches.length !== 1) return;
       e.preventDefault();
-      onMove(e.touches[0].clientX, e.touches[0].clientY);
+      dragState.onMove(e.touches[0].clientX, e.touches[0].clientY);
     };
     const onTouchEnd = () => {
-      onEnd();
+      dragState.onEnd();
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
       document.removeEventListener('touchcancel', onTouchEnd);
@@ -39,7 +41,7 @@ export function makeDraggable(element, handle) {
     document.addEventListener('touchcancel', onTouchEnd);
   }
   
-  function initiateDrag(clientX, clientY) {
+  function initiateDrag(clientX, clientY, inputType) {
     if (element.dataset.minimized === 'true') return;
     
     draggedElement = element;
@@ -57,13 +59,11 @@ export function makeDraggable(element, handle) {
       rafId = null;
     }
     
-    // These are set up by the caller (mouse or touch)
-    // onMove sets the delta and schedules rAF
-    function onMove(clientX, clientY) {
-      currentDx += clientX - lastX;
-      currentDy += clientY - lastY;
-      lastX = clientX;
-      lastY = clientY;
+    function onMove(x, y) {
+      currentDx += x - lastX;
+      currentDy += y - lastY;
+      lastX = x;
+      lastY = y;
       if (!rafId) {
         rafId = requestAnimationFrame(applyMovement);
       }
@@ -71,33 +71,34 @@ export function makeDraggable(element, handle) {
     
     function onEnd() {
       if (rafId) cancelAnimationFrame(rafId);
-      // Apply final position synchronously
       element.style.left = (startLeft + currentDx) + 'px';
       element.style.top = (startTop + currentDy) + 'px';
       draggedElement = null;
       import('./storage.js').then(({ debouncedSave }) => debouncedSave());
     }
     
-    // ── Mouse event handlers ──
-    function onMouseMove(e) {
-      e.preventDefault();
-      onMove(e.clientX, e.clientY);
-    }
-    function onMouseUp() {
-      onEnd();
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
+    // Mouse-only event handlers
+    if (inputType === 'mouse') {
+      function onMouseMove(e) {
+        e.preventDefault();
+        onMove(e.clientX, e.clientY);
+      }
+      function onMouseUp() {
+        onEnd();
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      
+      dragCleanup = () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
     }
     
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    
-    // Store cleanup for emergency
-    dragCleanup = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
+    return { onMove, onEnd };
   }
 }
 
