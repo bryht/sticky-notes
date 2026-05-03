@@ -34,20 +34,7 @@ export function initKeyboardShortcuts() {
       e.preventDefault();
       const focused = document.querySelector('.sticky-note:focus, .sticky-note:focus-within');
       if (focused) {
-        const isPinned = focused.dataset.pinned === 'true';
-        focused.dataset.pinned = isPinned ? 'false' : 'true';
-        const pinBtn = focused.querySelector('.pin-btn');
-        if (pinBtn) {
-          pinBtn.innerHTML = isPinned ? '📌' : '📍';
-          pinBtn.title = isPinned ? 'Pin' : 'Unpin';
-        }
-        // Update z-index
-        if (!isPinned) {
-          focused.style.zIndex = 999999;
-        } else {
-          focused.style.zIndex = '';
-        }
-        import('./storage.js').then(({ saveNotes }) => saveNotes());
+        import('./features.js').then(({ togglePin }) => togglePin(focused));
       }
       return;
     }

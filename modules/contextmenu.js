@@ -110,15 +110,7 @@ function showColorSubmenu(note, parentItem) {
 }
 
 function togglePin(note) {
-  const isPinned = note.dataset.pinned === 'true';
-  note.dataset.pinned = isPinned ? 'false' : 'true';
-  const pinBtn = note.querySelector('.pin-btn');
-  if (pinBtn) {
-    pinBtn.innerHTML = isPinned ? '📍' : '📌';
-    pinBtn.title = isPinned ? 'Pin' : 'Unpin';
-  }
-  note.style.zIndex = isPinned ? '' : '999999';
-  import('./storage.js').then(({ saveNotes }) => saveNotes());
+  import('./features.js').then(({ togglePin: doToggle }) => doToggle(note));
 }
 
 function toggleMinimize(note) {

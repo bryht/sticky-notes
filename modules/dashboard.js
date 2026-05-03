@@ -10,6 +10,7 @@ const NOTES_PER_PAGE = 25;
 let currentPage = 1;
 
 export function showAllNotesDashboard() {
+  currentPage = 1;
   const existing = document.getElementById('notes-dashboard');
   if (existing) existing.remove();
   
@@ -185,7 +186,6 @@ export function showAllNotesDashboard() {
     const paginationDiv = document.createElement('div');
     paginationDiv.className = 'dashboard-pagination';
     paginationDiv.id = 'dashboard-pagination';
-    paginationDiv.addEventListener('render', () => renderPagination());
     list.appendChild(paginationDiv);
 
     function renderPagination() {

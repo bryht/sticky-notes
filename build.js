@@ -23,8 +23,7 @@ async function bundleContentScript() {
     format: 'iife',
     target: 'chrome88',
     outfile: path.join(TEMP_DIR, 'contentScript.js'),
-    external: ['chrome:*'],
-    // Mark chrome.* as external — these are provided by the browser runtime
+    // chrome.* APIs are browser globals — no need to mark external
     banner: {
       js: '// Sticky Notes Extension - Bundled by esbuild for Chrome MV3 compatibility\n'
     },

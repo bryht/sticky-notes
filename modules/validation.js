@@ -26,7 +26,12 @@ export function validateImportData(data) {
       return { valid: false, error: `Note ${i}: content exceeds 50KB limit` };
     }
     if (note.url && typeof note.url === 'string') {
-      try { new URL(note.url); } catch(e) {
+      try {
+        const parsed = new URL(note.url);
+        if (!parsed.hostname) {
+          return { valid: false, error: `Note ${i}: invalid URL` };
+        }
+      } catch(e) {
         return { valid: false, error: `Note ${i}: invalid URL` };
       }
     }

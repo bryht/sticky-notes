@@ -129,29 +129,33 @@ export function showConfirmModal(message, options = {}) {
     const cancelBtn = overlay.querySelector('.modal-btn-cancel');
     const confirmBtn = overlay.querySelector(`.${confirmClass}`) || overlay.querySelectorAll('.modal-btn')[1];
 
-    cancelBtn.addEventListener('click', () => {
+    // Escape key handler — must be removed on any dismiss, not just Escape
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        cleanup();
+        resolve(false);
+      }
+    };
+
+    const cleanup = () => {
+      document.removeEventListener('keydown', escHandler);
       overlay.remove();
+    };
+
+    cancelBtn.addEventListener('click', () => {
+      cleanup();
       resolve(false);
     });
     confirmBtn.addEventListener('click', () => {
-      overlay.remove();
+      cleanup();
       resolve(true);
     });
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) {
-        overlay.remove();
+        cleanup();
         resolve(false);
       }
     });
-
-    // Escape key to cancel
-    const escHandler = (e) => {
-      if (e.key === 'Escape') {
-        overlay.remove();
-        document.removeEventListener('keydown', escHandler);
-        resolve(false);
-      }
-    };
     document.addEventListener('keydown', escHandler);
 
     document.body.appendChild(overlay);
