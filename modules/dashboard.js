@@ -6,8 +6,11 @@ import { toggleDarkMode, getDarkMode } from './darkmode.js';
 let currentSearchFilter = '';
 let selectedRowIndex = -1;
 let tableRows = [];
+const NOTES_PER_PAGE = 25;
+let currentPage = 1;
 
 export function showAllNotesDashboard() {
+  currentPage = 1;
   const existing = document.getElementById('notes-dashboard');
   if (existing) existing.remove();
   
@@ -179,8 +182,61 @@ export function showAllNotesDashboard() {
     table.appendChild(tbody);
     list.appendChild(table);
 
-    // Filter notes if search is already filled
+    // Pagination controls
+    const paginationDiv = document.createElement('div');
+    paginationDiv.className = 'dashboard-pagination';
+    paginationDiv.id = 'dashboard-pagination';
+    list.appendChild(paginationDiv);
+
+    function renderPagination() {
+      const filtered = tableRows.filter(({ row }) => row.style.display !== 'none');
+      const totalPages = Math.max(1, Math.ceil(filtered.length / NOTES_PER_PAGE));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      // Hide/show rows based on page
+      filtered.forEach(({ row }, idx) => {
+        const start = (currentPage - 1) * NOTES_PER_PAGE;
+        const end = start + NOTES_PER_PAGE;
+        row.style.display = (idx >= start && idx < end) ? '' : 'none';
+      });
+
+      // Unfiltered rows (those that don't match search) stay hidden
+      tableRows.forEach(({ row }) => {
+        if (row.dataset.filterHidden === 'true') {
+          row.style.display = 'none';
+        }
+      });
+
+      // Update pagination div
+      if (filtered.length <= NOTES_PER_PAGE) {
+        paginationDiv.style.display = 'none';
+        return;
+      }
+      paginationDiv.style.display = 'flex';
+      paginationDiv.innerHTML = '';
+
+      const info = document.createElement('span');
+      info.className = 'pagination-info';
+      info.textContent = `${((currentPage - 1) * NOTES_PER_PAGE) + 1}-${Math.min(currentPage * NOTES_PER_PAGE, filtered.length)} of ${filtered.length}`;
+
+      const prevBtn = document.createElement('button');
+      prevBtn.className = 'pagination-btn';
+      prevBtn.textContent = '← Prev';
+      prevBtn.disabled = currentPage <= 1;
+      prevBtn.addEventListener('click', () => { currentPage--; renderPagination(); });
+
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'pagination-btn';
+      nextBtn.textContent = 'Next →';
+      nextBtn.disabled = currentPage >= totalPages;
+      nextBtn.addEventListener('click', () => { currentPage++; renderPagination(); });
+
+      paginationDiv.append(prevBtn, info, nextBtn);
+    }
+
+    // Filter notes if search is already filled, then render pagination
     if (currentSearchFilter) filterNotes();
+    renderPagination();
   });
 
   function filterNotes() {

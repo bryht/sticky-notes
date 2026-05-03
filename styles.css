@@ -720,3 +720,368 @@ body.sticky-notes-dark .sticky-notes-toast-info { background: #1a2e3e; color: #8
 body.sticky-notes-dark .sticky-notes-toast-success { background: #1a3e20; color: #a5d6a7; }
 body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #ef9a9a; }
 body.sticky-notes-dark .sticky-notes-toast-warning { background: #3e3a1a; color: #ffe082; }
+
+/* ── Confirmation Modal ── */
+.sticky-notes-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  animation: sticky-notes-fade-in 0.15s ease-out;
+}
+
+.sticky-notes-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  animation: sticky-notes-slide-up 0.2s ease-out;
+}
+
+.sticky-notes-modal .modal-title {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.sticky-notes-modal .modal-message {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #444;
+}
+
+.sticky-notes-modal .modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.sticky-notes-modal .modal-btn {
+  padding: 8px 18px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sticky-notes-modal .modal-btn-cancel {
+  background: #f5f5f5;
+  color: #555;
+}
+
+.sticky-notes-modal .modal-btn-cancel:hover {
+  background: #eee;
+}
+
+.sticky-notes-modal .modal-btn-danger {
+  background: #dc3545;
+  color: #fff;
+  border-color: #dc3545;
+}
+
+.sticky-notes-modal .modal-btn-danger:hover {
+  background: #c82333;
+}
+
+@keyframes sticky-notes-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sticky-notes-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ── Toast Action Button ── */
+.sticky-notes-toast .toast-action-btn {
+  background: #fff;
+  border: 1px solid #1976d2;
+  color: #1976d2;
+  padding: 2px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+  transition: background 0.15s;
+}
+
+.sticky-notes-toast .toast-action-btn:hover {
+  background: #e3f2fd;
+}
+
+/* ── Character Count ── */
+.note-footer .note-char-count {
+  position: absolute;
+  right: 18px;
+  bottom: 2px;
+  font-size: 10px;
+  color: #999;
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+}
+
+.sticky-note:hover .note-char-count {
+  opacity: 1;
+}
+
+.dark-mode .note-footer .note-char-count {
+  color: #777;
+}
+
+/* ── Context Menu ── */
+.sticky-notes-context-menu {
+  position: fixed;
+  z-index: 9999999;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 4px 0;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  animation: sticky-notes-fade-in 0.1s ease-out;
+}
+
+.sticky-notes-context-menu.dark {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #eee;
+}
+
+.sticky-notes-context-menu .ctx-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.1s;
+}
+
+.sticky-notes-context-menu .ctx-item:hover {
+  background: #f0f0f0;
+}
+
+.sticky-notes-context-menu.dark .ctx-item:hover {
+  background: #3a3a3a;
+}
+
+.sticky-notes-context-menu .ctx-danger {
+  color: #dc3545;
+}
+
+.sticky-notes-context-menu .ctx-danger:hover {
+  background: #fce4ec;
+}
+
+.sticky-notes-context-menu.dark .ctx-danger:hover {
+  background: #4a2030;
+}
+
+.sticky-notes-context-menu .ctx-has-submenu {
+  position: relative;
+  justify-content: space-between;
+}
+
+.sticky-notes-context-menu .ctx-arrow {
+  opacity: 0.5;
+  font-size: 10px;
+}
+
+.sticky-notes-context-menu .ctx-submenu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  width: 160px;
+  animation: sticky-notes-fade-in 0.1s ease-out;
+}
+
+.sticky-notes-context-menu.dark .ctx-submenu {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+.sticky-notes-context-menu .ctx-color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.1s, border-color 0.1s;
+}
+
+.sticky-notes-context-menu .ctx-color-swatch:hover {
+  transform: scale(1.2);
+  border-color: #333;
+}
+
+/* ── Dashboard Pagination ── */
+.dashboard-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.dashboard-pagination .pagination-info {
+  font-size: 13px;
+  color: #666;
+}
+
+.dashboard-pagination .pagination-btn {
+  padding: 4px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dashboard-pagination .pagination-btn:hover:not(:disabled) {
+  background: #e8e8e8;
+}
+
+.dashboard-pagination .pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dark-mode .dashboard-pagination {
+  border-color: #444;
+}
+
+.dark-mode .dashboard-pagination .pagination-info {
+  color: #aaa;
+}
+
+.dark-mode .dashboard-pagination .pagination-btn {
+  background: #333;
+  border-color: #555;
+  color: #ddd;
+}
+
+/* ── Shortcuts Reference Panel ── */
+.sticky-notes-shortcuts-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  animation: sticky-notes-fade-in 0.15s ease-out;
+}
+
+.sticky-notes-shortcuts-panel {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  animation: sticky-notes-slide-up 0.2s ease-out;
+}
+
+.sticky-notes-shortcuts-panel .shortcuts-title {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sticky-notes-shortcuts-panel .shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.sticky-notes-shortcuts-panel .shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sticky-notes-shortcuts-panel .shortcut-key {
+  display: inline-block;
+  padding: 3px 8px;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  min-width: 80px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sticky-notes-shortcuts-panel .shortcut-desc {
+  font-size: 14px;
+  color: #555;
+  text-align: right;
+  flex: 1;
+}
+
+.sticky-notes-shortcuts-panel .shortcuts-close-btn {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: center;
+}
+
+.sticky-notes-shortcuts-panel .shortcuts-close-btn:hover {
+  background: #e8e8e8;
+}
+
+.dark-mode .sticky-notes-shortcuts-panel {
+  background: #2a2a2a;
+}
+
+.dark-mode .sticky-notes-shortcuts-panel .shortcut-key {
+  background: #3a3a3a;
+  border-color: #555;
+  color: #ddd;
+}
+
+.dark-mode .sticky-notes-shortcuts-panel .shortcut-desc {
+  color: #aaa;
+}
+
+.dark-mode .sticky-notes-shortcuts-panel .shortcuts-close-btn {
+  background: #3a3a3a;
+  border-color: #555;
+  color: #ddd;
+}

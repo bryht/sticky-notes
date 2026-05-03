@@ -1,46 +1,104 @@
-// Drag functionality with proper cleanup
+// Drag functionality with rAF-based smooth movement, touch support, and proper cleanup
 
 let draggedElement = null;
 let dragCleanup = null;
 
 export function makeDraggable(element, handle) {
   handle.style.cursor = 'move';
+  handle.style.touchAction = 'none'; // Prevent scroll interference
   
   handle.addEventListener('mousedown', startDrag);
+  handle.addEventListener('touchstart', startDragTouch, { passive: false });
   
   function startDrag(e) {
     e.preventDefault();
+    const { cleanup } = initiateDrag(e.clientX, e.clientY, 'mouse');
+    // cleanup is called by onMouseUp
+  }
+  
+  function startDragTouch(e) {
+    e.preventDefault();
+    if (e.touches.length !== 1) return; // Only single-finger drag
+    const touch = e.touches[0];
+    // Use touch-only move/end handlers — don't add mouse listeners
+    // to avoid double-firing on hybrid devices (Surface, etc.)
+    const dragState = initiateDrag(touch.clientX, touch.clientY, 'touch');
+    
+    const onTouchMove = (e) => {
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+      dragState.onMove(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const onTouchEnd = () => {
+      dragState.onEnd();
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchEnd);
+    };
+    
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchEnd);
+  }
+  
+  function initiateDrag(clientX, clientY, inputType) {
     if (element.dataset.minimized === 'true') return;
     
     draggedElement = element;
-    const startX = e.clientX;
-    const startY = e.clientY;
     const startLeft = element.offsetLeft;
     const startTop = element.offsetTop;
+    let lastX = clientX;
+    let lastY = clientY;
+    let currentDx = 0;
+    let currentDy = 0;
+    let rafId = null;
     
-    function onMouseMove(e) {
-      e.preventDefault();
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      element.style.left = (startLeft + dx) + 'px';
-      element.style.top = (startTop + dy) + 'px';
+    function applyMovement() {
+      element.style.left = (startLeft + currentDx) + 'px';
+      element.style.top = (startTop + currentDy) + 'px';
+      rafId = null;
     }
     
-    function onMouseUp() {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
+    function onMove(x, y) {
+      currentDx += x - lastX;
+      currentDy += y - lastY;
+      lastX = x;
+      lastY = y;
+      if (!rafId) {
+        rafId = requestAnimationFrame(applyMovement);
+      }
+    }
+    
+    function onEnd() {
+      if (rafId) cancelAnimationFrame(rafId);
+      element.style.left = (startLeft + currentDx) + 'px';
+      element.style.top = (startTop + currentDy) + 'px';
       draggedElement = null;
       import('./storage.js').then(({ debouncedSave }) => debouncedSave());
     }
     
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    // Mouse-only event handlers
+    if (inputType === 'mouse') {
+      function onMouseMove(e) {
+        e.preventDefault();
+        onMove(e.clientX, e.clientY);
+      }
+      function onMouseUp() {
+        onEnd();
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      
+      dragCleanup = () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+    }
     
-    // Store cleanup for emergency
-    dragCleanup = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
+    return { onMove, onEnd };
   }
 }
 

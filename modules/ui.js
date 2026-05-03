@@ -43,10 +43,25 @@ export function createNote(content = '', position = null, id = null, options = {
   if (!position) {
     const existingNotes = document.querySelectorAll('.sticky-note');
     const offsetAmount = 20 + (existingNotes.length * 10);
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    // Default note size: 250w x 200h — clamp to stay within viewport
+    const maxLeft = Math.max(10, vw - 270);
+    const maxTop = Math.max(10, vh - 220);
+    const left = Math.min(80 + offsetAmount, maxLeft);
+    const top = Math.min(80 + offsetAmount, maxTop);
     position = {
-      top: `${80 + offsetAmount}px`,
-      left: `${80 + offsetAmount}px`
+      top: `${top}px`,
+      left: `${left}px`
     };
+  } else {
+    // Clamp loaded positions to current viewport too
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const topVal = parseInt(position.top, 10) || 0;
+    const leftVal = parseInt(position.left, 10) || 0;
+    position.top = `${Math.min(topVal, Math.max(10, vh - 220))}px`;
+    position.left = `${Math.min(leftVal, Math.max(10, vw - 270))}px`;
   }
   
   const colorKey = options.color || DEFAULT_NOTE.color;
@@ -168,9 +183,23 @@ export function createNote(content = '', position = null, id = null, options = {
     saveSiteDefault(note);
   });
   
-  // Footer with resize handle
+  // Footer with resize handle and character count
   const footer = document.createElement('div');
   footer.className = 'note-footer';
+
+  const charCount = document.createElement('span');
+  charCount.className = 'note-char-count';
+  const updateCharCount = () => {
+    const text = contentArea.textContent || '';
+    const len = text.length;
+    charCount.textContent = len > 0 ? `${len}` : '';
+    charCount.title = `${len} character${len === 1 ? '' : 's'}`;
+  };
+  updateCharCount();
+
+  footer.appendChild(charCount);
+  contentArea.addEventListener('input', updateCharCount);
+
   note.appendChild(header);
   note.appendChild(contentArea);
   note.appendChild(footer);
@@ -220,13 +249,59 @@ async function saveSiteDefault(note, colorKey) {
   } catch(e) { /* Per-site defaults are best-effort */ }
 }
 
+// ── Undo-Delete System ──
+// Use a Map keyed by noteId so rapid consecutive deletions don't overwrite each other
+const pendingDeletes = new Map(); // noteId -> { timer, data: { note, parent, nextSibling } }
+
+/**
+ * Delete a note with a 5-second undo window.
+ * Shows a toast with "Undo" button; if not clicked, deletion becomes permanent.
+ */
 export function deleteNoteElement(note) {
-  // Properly clean up: remove the element, its listeners are GC'd with it
-  // (cloneNode was a no-op for listener cleanup — cloned nodes don't carry listeners)
-  // Dispatch a custom event so other modules can clean up
+  const noteId = note.id;
+
+  // If there's already a pending delete for this same note, ignore
+  if (pendingDeletes.has(noteId)) return;
+
+  // Store data needed for undo
+  const parent = note.parentElement;
+  const nextSibling = note.nextElementSibling;
+
+  // Dispatch custom event so other modules can clean up
   note.dispatchEvent(new CustomEvent('note-destroying', { bubbles: true }));
-  note.remove();
+
+  // Hide the note visually (but keep reference for undo)
+  note.style.display = 'none';
+
+  // Save notes without the hidden one
   saveNotes();
+
+  // Show undo toast
+  showToast('Note deleted', 'Undo', () => {
+    // Undo: restore the note
+    if (pendingDeletes.has(noteId)) {
+      note.style.display = '';
+      if (nextSibling && nextSibling.parentElement === parent) {
+        parent.insertBefore(note, nextSibling);
+      } else {
+        parent.appendChild(note);
+      }
+      saveNotes();
+      clearTimeout(pendingDeletes.get(noteId).timer);
+      pendingDeletes.delete(noteId);
+    }
+  });
+
+  // Auto-confirm delete after 5 seconds
+  const timer = setTimeout(() => {
+    if (pendingDeletes.has(noteId)) {
+      // Permanently remove from DOM
+      note.remove();
+      pendingDeletes.delete(noteId);
+    }
+  }, 5000);
+
+  pendingDeletes.set(noteId, { timer, data: { note, parent, nextSibling } });
 }
 
 export function updateNoteColor(note, colorKey) {

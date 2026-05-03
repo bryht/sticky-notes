@@ -1,7 +1,7 @@
 // Keyboard shortcuts for Sticky Notes
 // Ctrl+Shift+N → create note, Ctrl+Shift+D → toggle dashboard,
-// Escape → close dashboard/color picker, Ctrl+S → force save,
-// Ctrl+Shift+E → export, Ctrl+Shift+I → import
+// Ctrl+Shift+P → pin/unpin focused note, Escape → close dashboard/color picker,
+// Ctrl+S → force save, Ctrl+Shift+E → export, Ctrl+Shift+I → import
 
 let initialized = false;
 
@@ -29,8 +29,24 @@ export function initKeyboardShortcuts() {
       return;
     }
 
+    // Ctrl+Shift+P → Pin/unpin the currently focused note
+    if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+      e.preventDefault();
+      const focused = document.querySelector('.sticky-note:focus, .sticky-note:focus-within');
+      if (focused) {
+        import('./features.js').then(({ togglePin }) => togglePin(focused));
+      }
+      return;
+    }
+
     // Escape → Close dashboard or color picker
     if (e.key === 'Escape') {
+      // Close modal first
+      const modal = document.getElementById('sticky-notes-modal-overlay');
+      if (modal) {
+        modal.remove();
+        return;
+      }
       // Close dashboard
       const dash = document.getElementById('notes-dashboard');
       if (dash) {
@@ -53,7 +69,7 @@ export function initKeyboardShortcuts() {
     }
 
     // Ctrl+S → Force save all notes
-    if (e.ctrlKey && !e.shiftKey && e.key === 's') {
+    if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 's') {
       e.preventDefault();
       import('./storage.js').then(({ saveNotes }) => saveNotes());
       return;
@@ -70,6 +86,13 @@ export function initKeyboardShortcuts() {
     if (e.ctrlKey && e.shiftKey && e.key === 'I') {
       e.preventDefault();
       import('./features.js').then(({ importNotes }) => importNotes());
+      return;
+    }
+
+    // Ctrl+Shift+? → Show keyboard shortcuts reference
+    if (e.ctrlKey && e.shiftKey && (e.key === '?' || e.key === '/')) {
+      e.preventDefault();
+      import('./shortcuts.js').then(({ showShortcutsPanel }) => showShortcutsPanel());
       return;
     }
   });

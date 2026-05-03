@@ -5,6 +5,7 @@ import { createNotesContainer, createNote, setActiveContainer } from './modules/
 import { initDragCleanup } from './modules/drag.js';
 import { loadNotes } from './modules/storage.js';
 import { initKeyboardShortcuts } from './modules/keyboard.js';
+import { initContextMenu } from './modules/contextmenu.js';
 import { initRichTextToolbar } from './modules/richtext.js';
 import { initDarkMode } from './modules/darkmode.js';
 import { initMarkdownSupport } from './modules/markdown.js';
@@ -25,6 +26,7 @@ async function init() {
   // Initialize features
   initDragCleanup();
   initKeyboardShortcuts();
+  initContextMenu();
   initRichTextToolbar();
   initDarkMode();
   initMarkdownSupport();

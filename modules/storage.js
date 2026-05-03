@@ -25,7 +25,7 @@ function sendMessage(msg) {
 }
 
 export function saveNotes() {
-  const notes = document.querySelectorAll('.sticky-note');
+  const notes = document.querySelectorAll('.sticky-note:not([style*="display: none"])');
   const currentUrl = window.location.href.split('#')[0];
   
   const currentPageNotes = [];
