@@ -10,10 +10,71 @@ export function debouncedSave() {
 /**
  * Force-save immediately (no debounce). Used before page unload to
  * prevent data loss on refresh/navigation.
+ * Writes directly to chrome.storage.local (no message roundtrip) so
+ * the browser doesn't kill the tab before the background script replies.
  */
 export function saveNotesNow() {
   clearTimeout(saveTimeout);
-  return saveNotes();
+  const notes = document.querySelectorAll('.sticky-note:not([style*="display: none"])');
+  const currentUrl = window.location.href.split('#')[0];
+
+  const currentPageNotes = [];
+  notes.forEach(note => {
+    const contentEl = note.querySelector('.note-content');
+    const isMarkdown = note.dataset.markdown === 'true';
+    const rawContent = isMarkdown
+      ? (note.dataset.rawContent || contentEl?.innerText || '')
+      : (contentEl ? contentEl.innerHTML : '');
+    const noteData = {
+      id: note.id,
+      content: rawContent,
+      position: { top: note.style.top, left: note.style.left },
+      size: { width: note.style.width, height: note.style.height },
+      color: note.dataset.color || 'yellow',
+      minimized: note.dataset.minimized === 'true',
+      pinned: note.dataset.pinned === 'true',
+      markdown: isMarkdown,
+      url: currentUrl,
+      timestamp: Date.now()
+    };
+    currentPageNotes.push(noteData);
+  });
+
+  // Direct storage write — no async message roundtrip to background script.
+  // This ensures notes survive page refresh even if the browser kills the tab
+  // before beforeunload handlers finish their async work.
+  chrome.storage.local.get(['allNotes', 'urlIndex'], (result) => {
+    const allNotes = result.allNotes || {};
+    const urlIndex = result.urlIndex || {};
+
+    // Remove old notes for this URL
+    const previousNoteIds = urlIndex[currentUrl] || [];
+    previousNoteIds.forEach(noteId => delete allNotes[noteId]);
+
+    // Add current notes
+    urlIndex[currentUrl] = [];
+    currentPageNotes.forEach(noteData => {
+      allNotes[noteData.id] = noteData;
+      urlIndex[currentUrl].push(noteData.id);
+    });
+
+    chrome.storage.local.set({ allNotes, urlIndex }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn('Save failed:', chrome.runtime.lastError.message);
+      }
+    });
+
+    // Also notify background so it can update the badge (fire-and-forget)
+    try {
+      chrome.runtime.sendMessage({
+        action: 'saveNotes',
+        url: currentUrl,
+        notes: currentPageNotes
+      });
+    } catch (err) {
+      // Ignore — the direct storage write already succeeded
+    }
+  });
 }
 
 // Send message with promise wrapper and error handling
