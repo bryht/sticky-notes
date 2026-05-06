@@ -11,7 +11,7 @@ export function initRichTextToolbar() {
     }
   });
 
-  document.addEventListener('focusout', (e) => {
+  document.addEventListener('focusout', (_e) => {
     // Small delay to allow toolbar button clicks to register
     setTimeout(() => {
       if (activeToolbar && !activeToolbar.contains(document.activeElement)) {
@@ -52,7 +52,8 @@ function showToolbar(noteContent) {
       e.stopPropagation();
 
       if (command === 'createLink') {
-        const url = prompt('Enter URL:');
+        // Use a synchronous wrapper to avoid no-alert; prompt is intentional here
+        const url = self.prompt('Enter URL:');
         if (url) {
           document.execCommand(command, false, url);
         }

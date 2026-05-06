@@ -1,13 +1,14 @@
 import { NOTE_COLORS, DARK_NOTE_COLORS, DEFAULT_NOTE, Z_INDEX_BASE, PINNED_Z_INDEX, getSiteDefaults, setSiteDefaults } from './config.js';
 import { makeDraggable } from './drag.js';
 import { saveNotes, debouncedSave } from './storage.js';
+import { showToast } from './error.js';
 import { showAllNotesDashboard } from './dashboard.js';
-import { minimizeNote, restoreNote, addResizeHandle, showColorPicker, exportNotes, importNotes } from './features.js';
-import { isMarkdownEnabled, setMarkdownState } from './markdown.js';
+import { minimizeNote, restoreNote, addResizeHandle, showColorPicker } from './features.js';
+import { setMarkdownState } from './markdown.js';
 import { sanitizeHTML } from './sanitizer.js';
 
 let activeContainer = null;
-let noteCounter = 0;
+let _noteCounter = 0;
 let highestZIndex = Z_INDEX_BASE;
 
 export function setActiveContainer(container) {
@@ -238,7 +239,7 @@ function togglePin(note, pinBtn) {
 async function saveSiteDefault(note, colorKey) {
   try {
     const hostname = window.location.hostname;
-    const current = await getSiteDefaults(hostname);
+    await getSiteDefaults(hostname);
     const updates = {};
     if (colorKey) updates.color = colorKey;
     if (note.style.width) updates.width = note.style.width;

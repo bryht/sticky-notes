@@ -14,7 +14,7 @@ const ALLOWED_ATTRS = { 'A': ['href', 'target', 'rel'], 'SPAN': ['class', 'style
 function isDangerousURL(url) {
   if (!url) return false;
   // Strip whitespace and null bytes, then lowercase for comparison
-  const stripped = url.replace(/[\s\x00]+/g, '').toLowerCase();
+  const stripped = url.replace(/\s+/g, '').replace(/\0/g, '').toLowerCase();
   return stripped.startsWith('javascript:') ||
          stripped.startsWith('vbscript:') ||
          stripped.startsWith('data:text/html');

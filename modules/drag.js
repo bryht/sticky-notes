@@ -1,6 +1,6 @@
 // Drag functionality with rAF-based smooth movement, touch support, and proper cleanup
 
-let draggedElement = null;
+let _draggedElement = null;
 let dragCleanup = null;
 
 export function makeDraggable(element, handle) {
@@ -12,8 +12,8 @@ export function makeDraggable(element, handle) {
   
   function startDrag(e) {
     e.preventDefault();
-    const { cleanup } = initiateDrag(e.clientX, e.clientY, 'mouse');
-    // cleanup is called by onMouseUp
+    initiateDrag(e.clientX, e.clientY, 'mouse');
+    // cleanup is handled by onMouseUp inside initiateDrag
   }
   
   function startDragTouch(e) {
@@ -44,7 +44,7 @@ export function makeDraggable(element, handle) {
   function initiateDrag(clientX, clientY, inputType) {
     if (element.dataset.minimized === 'true') return;
     
-    draggedElement = element;
+    _draggedElement = element;
     const startLeft = element.offsetLeft;
     const startTop = element.offsetTop;
     let lastX = clientX;
@@ -73,21 +73,21 @@ export function makeDraggable(element, handle) {
       if (rafId) cancelAnimationFrame(rafId);
       element.style.left = (startLeft + currentDx) + 'px';
       element.style.top = (startTop + currentDy) + 'px';
-      draggedElement = null;
+      _draggedElement = null;
       import('./storage.js').then(({ debouncedSave }) => debouncedSave());
     }
     
     // Mouse-only event handlers
     if (inputType === 'mouse') {
-      function onMouseMove(e) {
+      const onMouseMove = (e) => {
         e.preventDefault();
         onMove(e.clientX, e.clientY);
-      }
-      function onMouseUp() {
+      };
+      const onMouseUp = () => {
         onEnd();
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
-      }
+      };
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
       

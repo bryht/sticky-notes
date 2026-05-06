@@ -1,5 +1,4 @@
 import { getAllNotes, deleteNoteById } from './storage.js';
-import { createNote, deleteNoteElement } from './ui.js';
 import { NOTE_COLORS } from './config.js';
 import { toggleDarkMode, getDarkMode } from './darkmode.js';
 
@@ -150,7 +149,9 @@ export function showAllNotesDashboard() {
       let hostname = 'unknown';
       try {
         hostname = new URL(note.url).hostname;
-      } catch(e) {}
+      } catch(e) {
+        // Invalid URL — keep default hostname
+      }
       
       // Color swatch
       const color = NOTE_COLORS[note.color]?.bg || '#fff59d';
@@ -246,7 +247,7 @@ export function showAllNotesDashboard() {
       temp.innerHTML = note.content || '';
       const text = temp.textContent || '';
       let hostname = '';
-      try { hostname = new URL(note.url).hostname; } catch(e) {}
+      try { hostname = new URL(note.url).hostname; } catch(e) { /* Invalid URL */ }
 
       const match = !filter || 
         text.toLowerCase().includes(filter) || 

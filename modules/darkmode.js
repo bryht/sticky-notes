@@ -1,4 +1,3 @@
-import { DARK_NOTE_COLORS } from './config.js';
 
 // Dark Mode for Sticky Notes
 // Auto-detects system preference, with manual toggle in dashboard

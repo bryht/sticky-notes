@@ -10,7 +10,7 @@ import { initRichTextToolbar } from './modules/richtext.js';
 import { initDarkMode } from './modules/darkmode.js';
 import { initMarkdownSupport } from './modules/markdown.js';
 import { withErrorBoundary } from './modules/error.js';
-import { getSiteDefaults } from './modules/config.js';
+
 
 let notesContainer = null;
 
