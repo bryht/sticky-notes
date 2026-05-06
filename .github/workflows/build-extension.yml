@@ -34,29 +34,13 @@ jobs:
     - name: Run tests
       run: npm test
 
-    - name: Build extension
-      run: node build.js
-
-    - name: Extract version
-      id: version
-      run: |
-        VERSION=$(node -p "require('./manifest.json').version")
-        echo "current_version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Version: $VERSION"
-
-    - name: Upload Extension Package
-      uses: actions/upload-artifact@v4
-      with:
-        name: sticky-notes-v${{ steps.version.outputs.current_version }}
-        path: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
-        retention-days: 7
-
-    # ── Bump, tag, and release (only on push to main) ──
+    # ── Bump version FIRST, before building (only on push to main) ──
     - name: Bump version and tag
       if: github.event_name == 'push'
       id: bump
       run: |
-        CURRENT_VERSION=${{ steps.version.outputs.current_version }}
+        CURRENT_VERSION=$(node -p "require('./manifest.json').version")
+        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
         IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
         NEW_PATCH=$((PATCH + 1))
         NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
@@ -88,14 +72,31 @@ jobs:
         # Push tag (force in case a stale tag exists from a previous run)
         git push --force origin "v$NEW_VERSION"
 
+    - name: Extract version
+      id: version
+      run: |
+        VERSION=$(node -p "require('./manifest.json').version")
+        echo "current_version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Build extension
+      run: node build.js
+
+    - name: Upload Extension Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: sticky-notes-v${{ steps.version.outputs.current_version }}
+        path: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
+        retention-days: 7
+
     - name: Create GitHub Release
       if: github.event_name == 'push'
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v${{ steps.bump.outputs.new_version }}
-        name: v${{ steps.bump.outputs.new_version }}
+        tag_name: v${{ steps.version.outputs.current_version }}
+        name: v${{ steps.version.outputs.current_version }}
         body: |
-          Sticky Notes Chrome Extension v${{ steps.bump.outputs.new_version }}
+          Sticky Notes Chrome Extension v${{ steps.version.outputs.current_version }}
         files: build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
         draft: false
         prerelease: false
