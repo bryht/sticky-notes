@@ -148,7 +148,8 @@ export function showColorPicker(note) {
   
   // Close when clicking outside
   onOutsideClick = (e) => {
-    if (!picker.contains(e.target) && !note.querySelector('.note-header').contains(e.target)) {
+    const header = note.querySelector('.note-header');
+    if (!picker.contains(e.target) && !(header && header.contains(e.target))) {
       cleanup();
     }
   };
