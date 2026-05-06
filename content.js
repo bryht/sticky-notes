@@ -32,8 +32,14 @@ async function init() {
   initMarkdownSupport();
   
   // Save notes immediately before page unload to prevent data loss on refresh
+  // Also listen for visibilitychange (fires before beforeunload on tab switch)
   window.addEventListener('beforeunload', () => {
     saveNotesNow();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      saveNotesNow();
+    }
   });
   
   // Add listener for extension icon clicks
