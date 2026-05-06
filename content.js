@@ -3,7 +3,7 @@
 
 import { createNotesContainer, createNote, setActiveContainer } from './modules/ui.js';
 import { initDragCleanup } from './modules/drag.js';
-import { loadNotes } from './modules/storage.js';
+import { loadNotes, saveNotesNow } from './modules/storage.js';
 import { initKeyboardShortcuts } from './modules/keyboard.js';
 import { initContextMenu } from './modules/contextmenu.js';
 import { initRichTextToolbar } from './modules/richtext.js';
@@ -30,6 +30,11 @@ async function init() {
   initRichTextToolbar();
   initDarkMode();
   initMarkdownSupport();
+  
+  // Save notes immediately before page unload to prevent data loss on refresh
+  window.addEventListener('beforeunload', () => {
+    saveNotesNow();
+  });
   
   // Add listener for extension icon clicks
   chrome.runtime.onMessage.addListener(

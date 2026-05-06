@@ -7,6 +7,15 @@ export function debouncedSave() {
   saveTimeout = setTimeout(saveNotes, SAVE_DEBOUNCE_MS);
 }
 
+/**
+ * Force-save immediately (no debounce). Used before page unload to
+ * prevent data loss on refresh/navigation.
+ */
+export function saveNotesNow() {
+  clearTimeout(saveTimeout);
+  return saveNotes();
+}
+
 // Send message with promise wrapper and error handling
 function sendMessage(msg) {
   return new Promise((resolve, reject) => {
@@ -31,7 +40,12 @@ export function saveNotes() {
   const currentPageNotes = [];
   notes.forEach(note => {
     const contentEl = note.querySelector('.note-content');
-    const rawContent = contentEl ? contentEl.innerHTML : '';
+    // If markdown is rendered, save the raw text so we can re-render on load;
+    // otherwise save the innerHTML (rich text content)
+    const isMarkdown = note.dataset.markdown === 'true';
+    const rawContent = isMarkdown
+      ? (note.dataset.rawContent || contentEl?.innerText || '')
+      : (contentEl ? contentEl.innerHTML : '');
     const noteData = {
       id: note.id,
       content: rawContent,
@@ -46,7 +60,7 @@ export function saveNotes() {
       color: note.dataset.color || 'yellow',
       minimized: note.dataset.minimized === 'true',
       pinned: note.dataset.pinned === 'true',
-      markdown: note.dataset.markdown === 'true',
+      markdown: isMarkdown,
       url: currentUrl,
       timestamp: Date.now()
     };

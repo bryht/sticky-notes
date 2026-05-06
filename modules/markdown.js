@@ -10,38 +10,47 @@ export function initMarkdownSupport() {
 
 export function toggleMarkdown(note) {
   const noteId = note.id;
+  const contentEl = note.querySelector('.note-content');
+  const mdBtn = note.querySelector('.markdown-btn');
+  if (!contentEl) return;
+
   const currentState = noteMarkdownState.get(noteId) || false;
   const newState = !currentState;
   noteMarkdownState.set(noteId, newState);
 
-  const contentEl = note.querySelector('.note-content');
-  const mdBtn = note.querySelector('.markdown-btn');
-
   if (newState) {
-    // Render markdown
-    if (mdBtn) mdBtn.title = 'Disable Markdown';
-    if (mdBtn) mdBtn.style.opacity = '1';
-
-    // Store raw text, render markdown HTML
-    if (!note.dataset.rawContent) {
-      note.dataset.rawContent = contentEl.innerText;
+    // Enable markdown rendering
+    if (mdBtn) {
+      mdBtn.title = 'Disable Markdown';
+      mdBtn.style.opacity = '1';
     }
-    contentEl.innerHTML = parseMarkdown(contentEl.innerText || note.dataset.rawContent);
+    note.dataset.markdown = 'true';
+
+    // Save the raw text before rendering so we can restore it for editing
+    note.dataset.rawContent = contentEl.innerText;
+    contentEl.innerHTML = parseMarkdown(contentEl.innerText);
+    // Make rendered output read-only; user must toggle back to edit
+    contentEl.contentEditable = 'false';
     contentEl.classList.add('markdown-rendered');
     contentEl.classList.remove('markdown-editing');
   } else {
-    // Show raw text
-    if (mdBtn) mdBtn.title = 'Enable Markdown';
-    if (mdBtn) mdBtn.style.opacity = '0.5';
+    // Disable markdown — switch back to editable text mode
+    if (mdBtn) {
+      mdBtn.title = 'Enable Markdown';
+      mdBtn.style.opacity = '0.5';
+    }
+    note.dataset.markdown = 'false';
 
+    // Restore the raw text for editing (from stored rawContent, or fall back to innerText)
     const rawText = note.dataset.rawContent || contentEl.innerText;
     contentEl.innerText = rawText;
+    delete note.dataset.rawContent;
+    contentEl.contentEditable = 'true';
     contentEl.classList.remove('markdown-rendered');
     contentEl.classList.add('markdown-editing');
-    delete note.dataset.rawContent;
   }
 
-  // Save the markdown preference
+  // Persist the preference
   import('./storage.js').then(({ debouncedSave }) => debouncedSave());
 }
 

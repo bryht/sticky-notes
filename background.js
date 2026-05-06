@@ -85,10 +85,23 @@ updateBadge();
 
 // Click extension icon to create note
 chrome.action.onClicked.addListener((tab) => {
-  chrome.tabs.sendMessage(tab.id, { action: 'createNote' }, () => {
-    // Handle missing content script
+  // Try to send message to content script; if it fails (content script
+  // not yet loaded), inject the content script and retry.
+  chrome.tabs.sendMessage(tab.id, { action: 'createNote' }, (_response) => {
     if (chrome.runtime.lastError) {
-      console.log('Tab not ready for sticky notes');
+      // Content script not loaded yet — inject and retry
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['contentScript.js']
+      }).then(() => {
+        chrome.tabs.sendMessage(tab.id, { action: 'createNote' }, () => {
+          if (chrome.runtime.lastError) {
+            console.log('Could not create note on this page');
+          }
+        });
+      }).catch(() => {
+        console.log('Cannot inject content script on this page (e.g. chrome:// URL)');
+      });
     }
   });
 });
