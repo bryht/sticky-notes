@@ -4,16 +4,6 @@ A powerful browser extension for creating, managing, and organizing sticky notes
 
 ![Sticky Notes Extension](icons/icon128.png)
 
-## What's New in v2.1.12
-
-### 🐛 Bug Fixes
-- **Notes lost on page refresh** — Fixed the root cause: all storage operations now read/write `chrome.storage.local` directly from the content script instead of proxying through the background service worker. In MV3, the service worker can be dormant or slow to wake up, causing async messages to fail silently.
-
-### 🔧 Technical
-- `loadNotes()`, `saveNotes()`, `saveSingleNote()`, `getAllNotes()`, `deleteNoteById()` all use direct `chrome.storage.local` access
-- Background script now only receives fire-and-forget messages for badge updates
-- Extracted shared helpers (`collectNotesFromDOM`, `writeNotesToStorage`, `notifyBackgroundForBadge`) to eliminate duplication
-
 ## Features
 
 ### Core
@@ -134,49 +124,6 @@ This extension is designed to work with:
 - Google Chrome (v88+)
 - Microsoft Edge (v88+)
 - Firefox (requires Manifest V2 port — see CONTRIBUTING.md)
-
-## Changelog
-
-### v2.1.12 (May 2026)
-- **Critical fix**: Notes lost on page refresh — all storage operations now bypass the background service worker and read/write `chrome.storage.local` directly from the content script
-- The MV3 service worker can be dormant when a tab loads, causing `chrome.runtime.sendMessage` to fail silently
-- Background script still handles badge updates via fire-and-forget messages
-
-### v2.2.0 (May 2026)
-- **Undo delete**: 5-second restore window with toast undo button
-- **Touch support**: Drag notes on tablets/phones
-- **Context menu**: Right-click on a note for Pin, Minimize, Color, Delete
-- **Viewport-aware positioning**: Notes always appear within the visible viewport
-- **Color picker preview**: Hover a color swatch to preview it on the note
-- **Dashboard pagination**: 25 notes per page with prev/next navigation
-- **Confirmation modals**: Styled modal dialogs replace `alert()`/`confirm()`
-- **Storage race condition fix**: Multi-tab writes merge safely (last-write-wins per note)
-- **esbuild bundler**: Replaced fragile regex-based bundler with esbuild for sourcemaps and reliability
-- **ESLint**: Proper config with `webextensions` env (no more `no-undef: off`)
-- **CI**: Test step added to GitHub Actions workflow
-- **ValidateImportData**: Deduplicated into shared `validation.js` module
-- **Unit tests**: Comprehensive sanitizer tests (30 cases), storage merge tests, expanded markdown tests
-- **Keyboard shortcuts**: Added `Ctrl+Shift+P` for pin toggle
-- **Character count**: Live character count in note footer
-- **rAF drag**: Smooth `requestAnimationFrame`-based drag movement
-- **README**: Updated with full keyboard shortcuts table and feature list
-
-### v2.0.0 (April 2026)
-- Complete refactor to modular architecture
-- Added resize, minimize, color picker
-- Added export/import JSON backup
-- Added note count badge
-- Added debounced save
-- Extracted CSS to external stylesheet
-- Fixed memory leaks and event cleanup
-- Improved error handling throughout
-
-### v1.1.2
-- Initial release
-- Basic create, edit, drag, delete
-- Dashboard view
-- Simple inline CSS
-- Payment placeholder
 
 ## Support Development
 
