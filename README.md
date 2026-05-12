@@ -4,37 +4,15 @@ A powerful browser extension for creating, managing, and organizing sticky notes
 
 ![Sticky Notes Extension](icons/icon128.png)
 
-## What's New in v2.0.0
-
-### ✨ New Features
-- **🎨 Color Picker** — Choose from 6 colors (Yellow, Pink, Blue, Green, Purple, White)
-- **↔️ Resize Notes** — Drag corner handle to resize any note
-- **─ Minimize / Restore** — Collapse notes to save screen space
-- **📤 Export** — Download all notes as a JSON backup file
-- **📥 Import** — Restore notes from a JSON backup
-- **🔢 Note Counter** — Badge on the extension icon shows total note count
-- **External Stylesheet** — Clean, modern CSS with smooth transitions
+## What's New in v2.1.12
 
 ### 🐛 Bug Fixes
-- Added debounced save (300ms) — no more constant storage writes while typing
-- Proper error handling on all `chrome.runtime.sendMessage` calls
-- Memory leak prevention — listeners are cleaned up properly
-- Fixed global document event pollution in drag handler
-- Z-index management — active note always on top
-- Scrollbars styled for modern look
+- **Notes lost on page refresh** — Fixed the root cause: all storage operations now read/write `chrome.storage.local` directly from the content script instead of proxying through the background service worker. In MV3, the service worker can be dormant or slow to wake up, causing async messages to fail silently.
 
-### 📁 Code Refactor
-- Split one 740-line file into **7 focused modules**
-  - `config.js` — Constants and defaults
-  - `ui.js` — Note creation, layout, color updates
-  - `drag.js` — Draggable mechanics with proper cleanup
-  - `storage.js` — Debounced CRUD operations
-  - `dashboard.js` — The "All Notes" view
-  - `features.js` — Resize, minimize, color picker, export/import
-  - `content.js` — Main entry point
-- Extracted all CSS from inline template strings into `styles.css`
-- Async/promise-based storage layer
-- Clean separation of concerns
+### 🔧 Technical
+- `loadNotes()`, `saveNotes()`, `saveSingleNote()`, `getAllNotes()`, `deleteNoteById()` all use direct `chrome.storage.local` access
+- Background script now only receives fire-and-forget messages for badge updates
+- Extracted shared helpers (`collectNotesFromDOM`, `writeNotesToStorage`, `notifyBackgroundForBadge`) to eliminate duplication
 
 ## Features
 
@@ -158,6 +136,11 @@ This extension is designed to work with:
 - Firefox (requires Manifest V2 port — see CONTRIBUTING.md)
 
 ## Changelog
+
+### v2.1.12 (May 2026)
+- **Critical fix**: Notes lost on page refresh — all storage operations now bypass the background service worker and read/write `chrome.storage.local` directly from the content script
+- The MV3 service worker can be dormant when a tab loads, causing `chrome.runtime.sendMessage` to fail silently
+- Background script still handles badge updates via fire-and-forget messages
 
 ### v2.2.0 (May 2026)
 - **Undo delete**: 5-second restore window with toast undo button
