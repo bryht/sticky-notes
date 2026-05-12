@@ -1,6 +1,6 @@
 {
   "name": "sticky-notes",
-  "version": "2.1.5",
+  "version": "2.1.12",
   "description": "Sticky Notes Chrome Extension",
   "private": true,
   "scripts": {
