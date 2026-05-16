@@ -4,6 +4,7 @@ import { getAllNotes, saveNotes, debouncedSave } from './storage.js';
 import { showAllNotesDashboard } from './dashboard.js';
 import { showToast, showConfirmModal } from './error.js';
 import { validateImportData } from './validation.js';
+import { getDarkMode } from './darkmode.js';
 
 // ===================
 // Pin / Unpin
@@ -110,9 +111,7 @@ export function showColorPicker(note) {
   const picker = document.createElement('div');
   picker.className = 'color-picker-popup';
 
-  // Check dark mode via container class (avoids circular import)
-  const isDark = document.getElementById('sticky-notes-container')?.classList.contains('dark-mode') || false;
-  const colorMap = isDark ? DARK_NOTE_COLORS : NOTE_COLORS;
+  const colorMap = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
   
   // Self-cleaning: remove picker and document listener together
   let onOutsideClick = null;

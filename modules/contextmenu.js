@@ -3,6 +3,12 @@
  * Right-click on a note shows options: Pin, Minimize, Change Color, Delete
  */
 
+import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
+import { updateNoteColor, deleteNoteElement } from './ui.js';
+import { togglePin, minimizeNote, restoreNote } from './features.js';
+import { toggleMarkdown } from './markdown.js';
+import { getDarkMode } from './darkmode.js';
+
 let contextMenu = null;
 
 export function initContextMenu() {
@@ -36,18 +42,17 @@ function showContextMenu(note, x, y) {
   const isPinned = note.dataset.pinned === 'true';
   const isMinimized = note.dataset.minimized === 'true';
   const isMarkdown = note.dataset.markdown === 'true';
-  const isDark = document.getElementById('sticky-notes-container')?.classList.contains('dark-mode') || false;
 
   contextMenu = document.createElement('div');
   contextMenu.className = 'sticky-notes-context-menu';
-  if (isDark) contextMenu.classList.add('dark');
+  if (getDarkMode()) contextMenu.classList.add('dark');
 
   const items = [
     { label: isPinned ? '📌 Unpin Note' : '📍 Pin Note', action: () => togglePin(note) },
     { label: isMinimized ? '□ Restore' : '─ Minimize', action: () => toggleMinimize(note) },
     { label: isMarkdown ? '📝 Disable Markdown' : '📝 Enable Markdown', action: () => toggleMarkdown(note) },
     { label: '🎨 Change Color ▸', action: null, submenu: true },
-    { label: '✕ Delete', action: () => deleteNote(note), danger: true },
+    { label: '✕ Delete', action: () => deleteNoteElement(note), danger: true },
   ];
 
   items.forEach(item => {
@@ -81,54 +86,37 @@ function showContextMenu(note, x, y) {
 }
 
 function showColorSubmenu(note, parentItem) {
-  // Remove existing submenu
-  const existing = parentItem.querySelector('.ctx-submenu');
-  if (existing) return;
+  // Don't reopen the submenu if it's already showing
+  if (parentItem.querySelector('.ctx-submenu')) return;
 
-  import('./config.js').then(({ NOTE_COLORS, DARK_NOTE_COLORS }) => {
-    const isDark = document.getElementById('sticky-notes-container')?.classList.contains('dark-mode') || false;
-    const colorMap = isDark ? DARK_NOTE_COLORS : NOTE_COLORS;
+  const colorMap = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
 
-    const submenu = document.createElement('div');
-    submenu.className = 'ctx-submenu';
+  const submenu = document.createElement('div');
+  submenu.className = 'ctx-submenu';
 
-    Object.entries(colorMap).forEach(([key, colors]) => {
-      const swatch = document.createElement('div');
-      swatch.className = 'ctx-color-swatch';
-      swatch.style.backgroundColor = colors.bg;
-      swatch.title = key;
-      swatch.addEventListener('click', (e) => {
-        e.stopPropagation();
-        removeContextMenu();
-        import('./ui.js').then(({ updateNoteColor }) => updateNoteColor(note, key));
-      });
-      submenu.appendChild(swatch);
+  Object.entries(colorMap).forEach(([key, colors]) => {
+    const swatch = document.createElement('div');
+    swatch.className = 'ctx-color-swatch';
+    swatch.style.backgroundColor = colors.bg;
+    swatch.title = key;
+    swatch.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeContextMenu();
+      updateNoteColor(note, key);
     });
-
-    parentItem.appendChild(submenu);
+    submenu.appendChild(swatch);
   });
-}
 
-function togglePin(note) {
-  import('./features.js').then(({ togglePin: doToggle }) => doToggle(note));
+  parentItem.appendChild(submenu);
 }
 
 function toggleMinimize(note) {
-  const isMinimized = note.dataset.minimized === 'true';
   const minBtn = note.querySelector('.minimize-btn');
-  if (isMinimized) {
-    import('./features.js').then(({ restoreNote }) => restoreNote(note, minBtn));
+  if (note.dataset.minimized === 'true') {
+    restoreNote(note, minBtn);
   } else {
-    import('./features.js').then(({ minimizeNote }) => minimizeNote(note, minBtn));
+    minimizeNote(note, minBtn);
   }
-}
-
-function toggleMarkdown(note) {
-  import('./markdown.js').then(({ toggleMarkdown }) => toggleMarkdown(note));
-}
-
-function deleteNote(note) {
-  import('./ui.js').then(({ deleteNoteElement }) => deleteNoteElement(note));
 }
 
 function removeContextMenu() {

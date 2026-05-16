@@ -1,6 +1,7 @@
 // Drag functionality with rAF-based smooth movement, touch support, and proper cleanup
 
-let _draggedElement = null;
+import { debouncedSave } from './storage.js';
+
 let dragCleanup = null;
 
 export function makeDraggable(element, handle) {
@@ -44,7 +45,6 @@ export function makeDraggable(element, handle) {
   function initiateDrag(clientX, clientY, inputType) {
     if (element.dataset.minimized === 'true') return;
     
-    _draggedElement = element;
     const startLeft = element.offsetLeft;
     const startTop = element.offsetTop;
     let lastX = clientX;
@@ -73,8 +73,7 @@ export function makeDraggable(element, handle) {
       if (rafId) cancelAnimationFrame(rafId);
       element.style.left = (startLeft + currentDx) + 'px';
       element.style.top = (startTop + currentDy) + 'px';
-      _draggedElement = null;
-      import('./storage.js').then(({ debouncedSave }) => debouncedSave());
+      debouncedSave();
     }
     
     // Mouse-only event handlers

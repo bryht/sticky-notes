@@ -1,6 +1,7 @@
 import { getAllNotes, deleteNoteById } from './storage.js';
 import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
 import { toggleDarkMode, getDarkMode } from './darkmode.js';
+import { escapeHtml } from './sanitizer.js';
 
 let currentSearchFilter = '';
 let selectedRowIndex = -1;
@@ -320,8 +321,3 @@ export function showAllNotesDashboard() {
   }
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}

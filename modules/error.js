@@ -1,6 +1,8 @@
 // Error Boundary for Sticky Notes
 // Wraps initialization in try/catch and shows user-visible error banner
 
+import { escapeHtml } from './sanitizer.js';
+
 export function withErrorBoundary(fn, context = 'Sticky Notes') {
   try {
     const result = fn();
@@ -66,8 +68,8 @@ export function showToast(message, type = 'info', durationOrAction = 3000, durat
   toast.className = `sticky-notes-toast sticky-notes-toast-${hasAction ? 'info' : type}`;
   toast.innerHTML = `
     <span class="toast-icon">${icon}</span>
-    <span class="toast-message">${escapeHtmlSimple(message)}</span>
-    ${hasAction ? `<button class="toast-action-btn">${escapeHtmlSimple(actionLabel)}</button>` : ''}
+    <span class="toast-message">${escapeHtml(message)}</span>
+    ${hasAction ? `<button class="toast-action-btn">${escapeHtml(actionLabel)}</button>` : ''}
     <button class="toast-dismiss" title="Dismiss">✕</button>
   `;
 
@@ -117,11 +119,11 @@ export function showConfirmModal(message, options = {}) {
     overlay.className = 'sticky-notes-modal-overlay';
     overlay.innerHTML = `
       <div class="sticky-notes-modal">
-        <h3 class="modal-title">${escapeHtmlSimple(title)}</h3>
-        <p class="modal-message">${escapeHtmlSimple(message)}</p>
+        <h3 class="modal-title">${escapeHtml(title)}</h3>
+        <p class="modal-message">${escapeHtml(message)}</p>
         <div class="modal-actions">
-          <button class="modal-btn modal-btn-cancel">${escapeHtmlSimple(cancelText)}</button>
-          <button class="modal-btn ${confirmClass}">${escapeHtmlSimple(confirmText)}</button>
+          <button class="modal-btn modal-btn-cancel">${escapeHtml(cancelText)}</button>
+          <button class="modal-btn ${confirmClass}">${escapeHtml(confirmText)}</button>
         </div>
       </div>
     `;
@@ -163,8 +165,3 @@ export function showConfirmModal(message, options = {}) {
   });
 }
 
-function escapeHtmlSimple(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
