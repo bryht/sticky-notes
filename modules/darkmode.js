@@ -3,6 +3,8 @@
 // Auto-detects system preference, with manual toggle in dashboard
 // Stores preference in chrome.storage.local
 
+import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
+
 let isDarkMode = false;
 
 export function initDarkMode() {
@@ -43,16 +45,18 @@ function applyDarkMode() {
   const container = document.getElementById('sticky-notes-container');
   if (!container) return;
 
-  if (isDarkMode) {
-    container.classList.add('dark-mode');
-  } else {
-    container.classList.remove('dark-mode');
-  }
+  container.classList.toggle('dark-mode', isDarkMode);
+  document.body.classList.toggle('sticky-notes-dark', isDarkMode);
 
-  // Also apply to body for dashboard overlay
-  if (isDarkMode) {
-    document.body.classList.add('sticky-notes-dark');
-  } else {
-    document.body.classList.remove('sticky-notes-dark');
-  }
+  // Repaint every existing note so inline bg colors track the current theme.
+  // Without this, notes created/loaded before the theme was applied keep their
+  // original palette and look out of sync with newly created ones.
+  const palette = isDarkMode ? DARK_NOTE_COLORS : NOTE_COLORS;
+  container.querySelectorAll('.sticky-note').forEach((note) => {
+    const colorKey = note.dataset.color || 'yellow';
+    const colors = palette[colorKey] || palette.yellow;
+    note.style.backgroundColor = colors.bg;
+    const header = note.querySelector('.note-header');
+    if (header) header.style.backgroundColor = colors.header;
+  });
 }
