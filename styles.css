@@ -582,6 +582,10 @@
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+#sticky-notes-container.dark-mode .note-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
 #sticky-notes-container.dark-mode .color-picker-popup {
   background: #333;
   border-color: #555;
@@ -794,6 +798,31 @@ body.sticky-notes-dark .sticky-notes-toast-warning { background: #3e3a1a; color:
   background: #c82333;
 }
 
+body.sticky-notes-dark .sticky-notes-modal {
+  background: #2a2a2a;
+}
+
+body.sticky-notes-dark .sticky-notes-modal .modal-title {
+  color: #e0e0e0;
+}
+
+body.sticky-notes-dark .sticky-notes-modal .modal-message {
+  color: #bbb;
+}
+
+body.sticky-notes-dark .sticky-notes-modal .modal-btn {
+  border-color: #555;
+}
+
+body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel {
+  background: #3a3a3a;
+  color: #ddd;
+}
+
+body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
+  background: #4a4a4a;
+}
+
 @keyframes sticky-notes-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -971,15 +1000,15 @@ body.sticky-notes-dark .sticky-notes-toast-warning { background: #3e3a1a; color:
   cursor: not-allowed;
 }
 
-.dark-mode .dashboard-pagination {
+.sticky-notes-dark .dashboard-pagination {
   border-color: #444;
 }
 
-.dark-mode .dashboard-pagination .pagination-info {
+.sticky-notes-dark .dashboard-pagination .pagination-info {
   color: #aaa;
 }
 
-.dark-mode .dashboard-pagination .pagination-btn {
+.sticky-notes-dark .dashboard-pagination .pagination-btn {
   background: #333;
   border-color: #555;
   color: #ddd;
@@ -1066,21 +1095,21 @@ body.sticky-notes-dark .sticky-notes-toast-warning { background: #3e3a1a; color:
   background: #e8e8e8;
 }
 
-.dark-mode .sticky-notes-shortcuts-panel {
+.sticky-notes-dark .sticky-notes-shortcuts-panel {
   background: #2a2a2a;
 }
 
-.dark-mode .sticky-notes-shortcuts-panel .shortcut-key {
+.sticky-notes-dark .sticky-notes-shortcuts-panel .shortcut-key {
   background: #3a3a3a;
   border-color: #555;
   color: #ddd;
 }
 
-.dark-mode .sticky-notes-shortcuts-panel .shortcut-desc {
+.sticky-notes-dark .sticky-notes-shortcuts-panel .shortcut-desc {
   color: #aaa;
 }
 
-.dark-mode .sticky-notes-shortcuts-panel .shortcuts-close-btn {
+.sticky-notes-dark .sticky-notes-shortcuts-panel .shortcuts-close-btn {
   background: #3a3a3a;
   border-color: #555;
   color: #ddd;
