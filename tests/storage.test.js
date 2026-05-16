@@ -54,8 +54,6 @@ describe('Storage module business logic', () => {
         size: { width: '250px', height: '200px' },
         color: 'yellow',
         minimized: false,
-        pinned: false,
-        markdown: false,
         url: 'https://example.com',
         timestamp: Date.now(),
       };
@@ -168,15 +166,11 @@ describe('Storage module business logic', () => {
   describe('Storage migration', () => {
     test('adds missing fields to old notes', () => {
       const oldNote = { id: 'note-1', content: 'hello' };
-      // Migration should add: timestamp, pinned, markdown, size
+      // Migration should add: timestamp, size
       if (!oldNote.timestamp) oldNote.timestamp = Date.now();
-      if (oldNote.pinned === undefined) oldNote.pinned = false;
-      if (oldNote.markdown === undefined) oldNote.markdown = false;
       if (!oldNote.size) oldNote.size = { width: '200px', height: '150px' };
 
       expect(oldNote.timestamp).toBeDefined();
-      expect(oldNote.pinned).toBe(false);
-      expect(oldNote.markdown).toBe(false);
       expect(oldNote.size).toEqual({ width: '200px', height: '150px' });
     });
   });

@@ -129,7 +129,6 @@ export function showAllNotesDashboard() {
           <th>Content</th>
           <th>Page</th>
           <th>Color</th>
-          <th>Pinned</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -157,13 +156,11 @@ export function showAllNotesDashboard() {
       // Color swatch — match the active theme so the marker reflects the note's actual look
       const palette = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
       const color = palette[note.color]?.bg || palette.yellow.bg;
-      const pinned = note.pinned ? '📌' : '';
 
       tr.innerHTML = `
         <td class="dash-content">${escapeHtml(text)}</td>
         <td><a href="${escapeHtml(note.url)}" target="_blank">${escapeHtml(hostname)}</a></td>
         <td><span class="color-swatch" style="background:${color}"></span></td>
-        <td>${pinned}</td>
         <td><button class="dash-delete-btn" data-id="${note.id}" data-url="${note.url}">Delete</button></td>
       `;
       

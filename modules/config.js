@@ -27,7 +27,6 @@ export const DEFAULT_NOTE = {
 
 export const SAVE_DEBOUNCE_MS = 300;
 export const Z_INDEX_BASE = 9998;
-export const PINNED_Z_INDEX = 2147483640; // Near max z-index for pinned notes
 export const STORAGE_VERSION = 2;
 
 // Per-site defaults — get/set preferred note size/color per hostname

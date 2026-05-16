@@ -17,19 +17,13 @@ function collectNotesFromDOM() {
 
   notes.forEach(note => {
     const contentEl = note.querySelector('.note-content');
-    const isMarkdown = note.dataset.markdown === 'true';
-    const rawContent = isMarkdown
-      ? (note.dataset.rawContent || contentEl?.innerText || '')
-      : (contentEl ? contentEl.innerHTML : '');
     currentPageNotes.push({
       id: note.id,
-      content: rawContent,
+      content: contentEl ? contentEl.innerHTML : '',
       position: { top: note.style.top, left: note.style.left },
       size: { width: note.style.width, height: note.style.height },
       color: note.dataset.color || 'yellow',
       minimized: note.dataset.minimized === 'true',
-      pinned: note.dataset.pinned === 'true',
-      markdown: isMarkdown,
       url: currentUrl,
       timestamp: Date.now()
     });
@@ -184,9 +178,7 @@ export function loadNotes() {
               width: noteData.size?.width,
               minHeight: noteData.size?.height,
               color: noteData.color,
-              minimized: noteData.minimized,
-              pinned: noteData.pinned,
-              markdown: noteData.markdown
+              minimized: noteData.minimized
             }
           );
         }).catch(err => console.warn('Failed to create note:', err));
@@ -251,7 +243,7 @@ export function migrateStorage() {
     const currentVersion = result.storageVersion || 1;
 
     if (currentVersion < 2) {
-      // Migration v1 → v2: Add timestamp and pinned fields to existing notes
+      // Migration v1 → v2: Add timestamp field to existing notes
       const allNotes = result.allNotes || {};
       const urlIndex = result.urlIndex || {};
 
@@ -259,8 +251,6 @@ export function migrateStorage() {
         const note = allNotes[noteId];
         // Add missing fields with defaults
         if (!note.timestamp) note.timestamp = Date.now();
-        if (note.pinned === undefined) note.pinned = false;
-        if (note.markdown === undefined) note.markdown = false;
         if (!note.size) {
           note.size = { width: '200px', height: '150px' };
         }

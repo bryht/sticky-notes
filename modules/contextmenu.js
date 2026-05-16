@@ -1,12 +1,11 @@
 /**
  * Custom context menu for Sticky Notes
- * Right-click on a note shows options: Pin, Minimize, Change Color, Delete
+ * Right-click on a note shows options: Minimize, Change Color, Delete
  */
 
 import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
 import { updateNoteColor, deleteNoteElement } from './ui.js';
-import { togglePin, minimizeNote, restoreNote } from './features.js';
-import { toggleMarkdown } from './markdown.js';
+import { minimizeNote, restoreNote } from './features.js';
 import { getDarkMode } from './darkmode.js';
 
 let contextMenu = null;
@@ -39,18 +38,14 @@ export function initContextMenu() {
 function showContextMenu(note, x, y) {
   removeContextMenu();
 
-  const isPinned = note.dataset.pinned === 'true';
   const isMinimized = note.dataset.minimized === 'true';
-  const isMarkdown = note.dataset.markdown === 'true';
 
   contextMenu = document.createElement('div');
   contextMenu.className = 'sticky-notes-context-menu';
   if (getDarkMode()) contextMenu.classList.add('dark');
 
   const items = [
-    { label: isPinned ? '📌 Unpin Note' : '📍 Pin Note', action: () => togglePin(note) },
     { label: isMinimized ? '□ Restore' : '─ Minimize', action: () => toggleMinimize(note) },
-    { label: isMarkdown ? '📝 Disable Markdown' : '📝 Enable Markdown', action: () => toggleMarkdown(note) },
     { label: '🎨 Change Color ▸', action: null, submenu: true },
     { label: '✕ Delete', action: () => deleteNoteElement(note), danger: true },
   ];
