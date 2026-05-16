@@ -103,7 +103,7 @@ export function createNote(content = '', position = null, id = null, options = {
   // Title / drag handle
   const title = document.createElement('span');
   title.className = 'note-title';
-  title.textContent = options.title || 'Note';
+  title.textContent = options.title || '';
   header.appendChild(title);
   
   // Buttons container
