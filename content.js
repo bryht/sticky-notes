@@ -8,7 +8,6 @@ import { initKeyboardShortcuts } from './modules/keyboard.js';
 import { initContextMenu } from './modules/contextmenu.js';
 import { initRichTextToolbar } from './modules/richtext.js';
 import { initDarkMode } from './modules/darkmode.js';
-import { initMarkdownSupport } from './modules/markdown.js';
 import { withErrorBoundary } from './modules/error.js';
 
 
@@ -29,8 +28,7 @@ async function init() {
   initContextMenu();
   initRichTextToolbar();
   initDarkMode();
-  initMarkdownSupport();
-  
+
   // Save notes immediately before page unload to prevent data loss on refresh
   // Also listen for visibilitychange (fires before beforeunload on tab switch)
   window.addEventListener('beforeunload', () => {

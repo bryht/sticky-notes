@@ -4,7 +4,6 @@ import { saveNotes, debouncedSave } from './storage.js';
 import { showToast } from './error.js';
 import { showAllNotesDashboard } from './dashboard.js';
 import { minimizeNote, restoreNote, addResizeHandle, showColorPicker } from './features.js';
-import { setMarkdownState, toggleMarkdown } from './markdown.js';
 import { sanitizeHTML } from './sanitizer.js';
 import { getDarkMode } from './darkmode.js';
 
@@ -72,10 +71,6 @@ export function createNote(content = '', position = null, id = null, options = {
   note.id = noteId;
   note.dataset.color = colorKey;
   note.dataset.minimized = 'false';
-  if (options.markdown) {
-    note.dataset.markdown = 'true';
-    setMarkdownState(noteId, true);
-  }
   note.style.cssText = `
     top: ${position.top};
     left: ${position.left};
@@ -113,17 +108,6 @@ export function createNote(content = '', position = null, id = null, options = {
     showColorPicker(note);
   });
   
-  // Markdown btn
-  const mdBtn = document.createElement('span');
-  mdBtn.innerHTML = '📝';
-  mdBtn.title = options.markdown ? 'Disable Markdown' : 'Enable Markdown';
-  mdBtn.className = 'note-btn markdown-btn';
-  mdBtn.style.opacity = options.markdown ? '1' : '0.5';
-  mdBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleMarkdown(note);
-  });
-
   // Minimize btn
   const minBtn = document.createElement('span');
   minBtn.innerHTML = '─';
@@ -152,7 +136,7 @@ export function createNote(content = '', position = null, id = null, options = {
   delBtn.className = 'note-btn delete-btn';
   delBtn.addEventListener('click', () => deleteNoteElement(note));
   
-  buttons.append(colorBtn, mdBtn, minBtn, dashBtn, delBtn);
+  buttons.append(colorBtn, minBtn, dashBtn, delBtn);
   header.appendChild(buttons);
   
   // Content

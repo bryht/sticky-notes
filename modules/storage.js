@@ -17,18 +17,13 @@ function collectNotesFromDOM() {
 
   notes.forEach(note => {
     const contentEl = note.querySelector('.note-content');
-    const isMarkdown = note.dataset.markdown === 'true';
-    const rawContent = isMarkdown
-      ? (note.dataset.rawContent || contentEl?.innerText || '')
-      : (contentEl ? contentEl.innerHTML : '');
     currentPageNotes.push({
       id: note.id,
-      content: rawContent,
+      content: contentEl ? contentEl.innerHTML : '',
       position: { top: note.style.top, left: note.style.left },
       size: { width: note.style.width, height: note.style.height },
       color: note.dataset.color || 'yellow',
       minimized: note.dataset.minimized === 'true',
-      markdown: isMarkdown,
       url: currentUrl,
       timestamp: Date.now()
     });
@@ -183,8 +178,7 @@ export function loadNotes() {
               width: noteData.size?.width,
               minHeight: noteData.size?.height,
               color: noteData.color,
-              minimized: noteData.minimized,
-              markdown: noteData.markdown
+              minimized: noteData.minimized
             }
           );
         }).catch(err => console.warn('Failed to create note:', err));
@@ -257,7 +251,6 @@ export function migrateStorage() {
         const note = allNotes[noteId];
         // Add missing fields with defaults
         if (!note.timestamp) note.timestamp = Date.now();
-        if (note.markdown === undefined) note.markdown = false;
         if (!note.size) {
           note.size = { width: '200px', height: '150px' };
         }

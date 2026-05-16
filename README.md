@@ -1,6 +1,6 @@
 # Sticky Notes 📝
 
-A powerful browser extension for creating, managing, and organizing sticky notes on any webpage. Create, color, and manage sticky notes on any website with undo-delete, touch support, and a built-in markdown renderer.
+A powerful browser extension for creating, managing, and organizing sticky notes on any webpage. Create, color, and manage sticky notes on any website with undo-delete and touch support.
 
 ![Sticky Notes Extension](icons/icon128.png)
 
@@ -40,7 +40,6 @@ A powerful browser extension for creating, managing, and organizing sticky notes
 
 ### Other
 - Dark mode support
-- Markdown rendering per note
 - Right-click context menu on notes
 - Character count in note footer
 - Cross-browser compatibility (Chrome, Edge; Firefox requires Manifest V2 adaptation)

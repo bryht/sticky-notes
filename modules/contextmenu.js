@@ -6,7 +6,6 @@
 import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
 import { updateNoteColor, deleteNoteElement } from './ui.js';
 import { minimizeNote, restoreNote } from './features.js';
-import { toggleMarkdown } from './markdown.js';
 import { getDarkMode } from './darkmode.js';
 
 let contextMenu = null;
@@ -40,7 +39,6 @@ function showContextMenu(note, x, y) {
   removeContextMenu();
 
   const isMinimized = note.dataset.minimized === 'true';
-  const isMarkdown = note.dataset.markdown === 'true';
 
   contextMenu = document.createElement('div');
   contextMenu.className = 'sticky-notes-context-menu';
@@ -48,7 +46,6 @@ function showContextMenu(note, x, y) {
 
   const items = [
     { label: isMinimized ? '□ Restore' : '─ Minimize', action: () => toggleMinimize(note) },
-    { label: isMarkdown ? '📝 Disable Markdown' : '📝 Enable Markdown', action: () => toggleMarkdown(note) },
     { label: '🎨 Change Color ▸', action: null, submenu: true },
     { label: '✕ Delete', action: () => deleteNoteElement(note), danger: true },
   ];

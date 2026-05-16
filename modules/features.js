@@ -222,8 +222,7 @@ export function importNotes() {
           createNote(n.content, n.position, n.id, {
             color: n.color,
             width: n.size?.width,
-            minHeight: n.size?.height,
-            markdown: n.markdown
+            minHeight: n.size?.height
           });
         });
       
