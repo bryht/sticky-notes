@@ -63,3 +63,11 @@ export function sanitizeHTML(html) {
   cleanNode(doc.body);
   return doc.body.innerHTML;
 }
+
+// Escape text for safe insertion into HTML. Use this for any user-supplied
+// string going into a template literal or innerHTML.
+export function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text == null ? '' : String(text);
+  return div.innerHTML;
+}

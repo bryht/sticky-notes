@@ -2,6 +2,9 @@
 // Basic markdown parsing: **bold**, *italic*, - bullet, # heading, [link](url)
 // Toggle per-note with 📝 button in header
 
+import { escapeHtml } from './sanitizer.js';
+import { debouncedSave } from './storage.js';
+
 const noteMarkdownState = new Map(); // noteId -> boolean
 
 export function initMarkdownSupport() {
@@ -50,8 +53,7 @@ export function toggleMarkdown(note) {
     contentEl.classList.add('markdown-editing');
   }
 
-  // Persist the preference
-  import('./storage.js').then(({ debouncedSave }) => debouncedSave());
+  debouncedSave();
 }
 
 export function isMarkdownEnabled(noteId) {
@@ -93,10 +95,4 @@ function parseMarkdown(text) {
   html = html.replace(/\n/g, '<br>');
 
   return html;
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }

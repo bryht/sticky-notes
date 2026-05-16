@@ -17,7 +17,17 @@ const converted = mdSource
   .replace(/^export\s+const\s+/gm, 'const ')
   .replace(/^export\s+let\s+/gm, 'let ');
 
-const testableCode = converted + '\nreturn { parseMarkdown };';
+// Shim the helpers that markdown.js now imports from other modules.
+const importedShims = `
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text == null ? '' : String(text);
+    return div.innerHTML;
+  }
+  function debouncedSave() {}
+`;
+
+const testableCode = importedShims + converted + '\nreturn { parseMarkdown };';
 const moduleExport = new Function(testableCode)();
 const parseMarkdown = moduleExport.parseMarkdown;
 

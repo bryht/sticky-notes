@@ -4,11 +4,11 @@ import { saveNotes, debouncedSave } from './storage.js';
 import { showToast } from './error.js';
 import { showAllNotesDashboard } from './dashboard.js';
 import { minimizeNote, restoreNote, addResizeHandle, showColorPicker } from './features.js';
-import { setMarkdownState } from './markdown.js';
+import { setMarkdownState, toggleMarkdown } from './markdown.js';
 import { sanitizeHTML } from './sanitizer.js';
+import { getDarkMode } from './darkmode.js';
 
 let activeContainer = null;
-let _noteCounter = 0;
 let highestZIndex = Z_INDEX_BASE;
 
 export function setActiveContainer(container) {
@@ -66,8 +66,8 @@ export function createNote(content = '', position = null, id = null, options = {
   }
   
   const colorKey = options.color || DEFAULT_NOTE.color;
-  const isDark = document.getElementById('sticky-notes-container')?.classList.contains('dark-mode') || false;
-  const colors = isDark ? DARK_NOTE_COLORS[colorKey] || DARK_NOTE_COLORS.yellow : NOTE_COLORS[colorKey] || NOTE_COLORS.yellow;
+  const palette = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
+  const colors = palette[colorKey] || palette.yellow;
   
   const note = document.createElement('div');
   note.className = 'sticky-note';
@@ -138,7 +138,7 @@ export function createNote(content = '', position = null, id = null, options = {
   mdBtn.style.opacity = options.markdown ? '1' : '0.5';
   mdBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    import('./markdown.js').then(({ toggleMarkdown }) => toggleMarkdown(note));
+    toggleMarkdown(note);
   });
 
   // Minimize btn
@@ -306,20 +306,15 @@ export function deleteNoteElement(note) {
 }
 
 export function updateNoteColor(note, colorKey) {
-  const isDark = document.getElementById('sticky-notes-container')?.classList.contains('dark-mode') || false;
-  const lightColors = NOTE_COLORS[colorKey];
-  const darkColors = DARK_NOTE_COLORS[colorKey];
-  if (!lightColors) return;
+  if (!NOTE_COLORS[colorKey]) return;
+
+  const palette = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
+  const colors = palette[colorKey] || NOTE_COLORS[colorKey];
 
   note.dataset.color = colorKey;
-
-  if (isDark && darkColors) {
-    note.style.backgroundColor = darkColors.bg;
-    note.querySelector('.note-header').style.backgroundColor = darkColors.header;
-  } else {
-    note.style.backgroundColor = lightColors.bg;
-    note.querySelector('.note-header').style.backgroundColor = lightColors.header;
-  }
+  note.style.backgroundColor = colors.bg;
+  const header = note.querySelector('.note-header');
+  if (header) header.style.backgroundColor = colors.header;
 
   saveSiteDefault(note, colorKey);
   saveNotes();
