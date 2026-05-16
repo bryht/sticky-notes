@@ -9,14 +9,14 @@ export const NOTE_COLORS = {
   white:  { bg: '#ffffff', header: '#e0e0e0' }
 };
 
-// Dark mode color palette
+// Dark mode color palette — muted but light enough for comfortable reading
 export const DARK_NOTE_COLORS = {
-  yellow: { bg: '#3e3a1a', header: '#5c5420' },
-  pink:   { bg: '#3e1a26', header: '#5c2030' },
-  blue:   { bg: '#1a2e3e', header: '#204060' },
-  green:  { bg: '#1a3e20', header: '#205c2e' },
-  purple: { bg: '#2e1a3e', header: '#40205c' },
-  white:  { bg: '#2a2a2a', header: '#3a3a3a' }
+  yellow: { bg: '#5a5028', header: '#7a6e38' },
+  pink:   { bg: '#5a2a3a', header: '#7a3a52' },
+  blue:   { bg: '#2a4a66', header: '#3a6088' },
+  green:  { bg: '#2a5232', header: '#3e7048' },
+  purple: { bg: '#4a2e62', header: '#62408a' },
+  white:  { bg: '#3a3a3a', header: '#4a4a4a' }
 };
 
 export const DEFAULT_NOTE = {

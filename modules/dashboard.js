@@ -1,5 +1,5 @@
 import { getAllNotes, deleteNoteById } from './storage.js';
-import { NOTE_COLORS } from './config.js';
+import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
 import { toggleDarkMode, getDarkMode } from './darkmode.js';
 
 let currentSearchFilter = '';
@@ -153,8 +153,9 @@ export function showAllNotesDashboard() {
         // Invalid URL — keep default hostname
       }
       
-      // Color swatch
-      const color = NOTE_COLORS[note.color]?.bg || '#fff59d';
+      // Color swatch — match the active theme so the marker reflects the note's actual look
+      const palette = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
+      const color = palette[note.color]?.bg || palette.yellow.bg;
       const pinned = note.pinned ? '📌' : '';
 
       tr.innerHTML = `
