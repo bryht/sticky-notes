@@ -1,39 +1,10 @@
-import { NOTE_COLORS, DARK_NOTE_COLORS, PINNED_Z_INDEX } from './config.js';
+import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
 import { updateNoteColor, createNote } from './ui.js';
-import { getAllNotes, saveNotes, debouncedSave } from './storage.js';
+import { getAllNotes, saveNotes } from './storage.js';
 import { showAllNotesDashboard } from './dashboard.js';
 import { showToast, showConfirmModal } from './error.js';
 import { validateImportData } from './validation.js';
 import { getDarkMode } from './darkmode.js';
-
-// ===================
-// Pin / Unpin
-// ===================
-
-export function togglePin(note) {
-  const isPinned = note.dataset.pinned === 'true';
-  note.dataset.pinned = isPinned ? 'false' : 'true';
-  const pinBtn = note.querySelector('.pin-btn');
-
-  if (note.dataset.pinned === 'true') {
-    note.classList.add('note-pinned');
-    note.style.zIndex = PINNED_Z_INDEX;
-    if (pinBtn) {
-      pinBtn.innerHTML = '📌';
-      pinBtn.title = 'Unpin';
-      pinBtn.classList.add('pinned');
-    }
-  } else {
-    note.classList.remove('note-pinned');
-    note.style.zIndex = '';
-    if (pinBtn) {
-      pinBtn.innerHTML = '📍';
-      pinBtn.title = 'Pin on top';
-      pinBtn.classList.remove('pinned');
-    }
-  }
-  debouncedSave();
-}
 
 // ===================
 // Minimize / Restore
@@ -252,7 +223,6 @@ export function importNotes() {
             color: n.color,
             width: n.size?.width,
             minHeight: n.size?.height,
-            pinned: n.pinned,
             markdown: n.markdown
           });
         });

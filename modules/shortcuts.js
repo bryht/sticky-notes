@@ -18,7 +18,6 @@ export function showShortcutsPanel() {
   const shortcuts = [
     { keys: 'Ctrl+Shift+N', desc: 'Create new note' },
     { keys: 'Ctrl+Shift+D', desc: 'Toggle dashboard' },
-    { keys: 'Ctrl+Shift+P', desc: 'Pin/unpin focused note' },
     { keys: 'Ctrl+Shift+E', desc: 'Export notes' },
     { keys: 'Ctrl+Shift+I', desc: 'Import notes' },
     { keys: 'Ctrl+S', desc: 'Force save' },

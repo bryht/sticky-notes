@@ -1,11 +1,11 @@
 // Keyboard shortcuts for Sticky Notes
 // Ctrl+Shift+N → create note, Ctrl+Shift+D → toggle dashboard,
-// Ctrl+Shift+P → pin/unpin focused note, Escape → close dashboard/color picker,
+// Escape → close dashboard/color picker,
 // Ctrl+S → force save, Ctrl+Shift+E → export, Ctrl+Shift+I → import
 
 import { createNote } from './ui.js';
 import { showAllNotesDashboard } from './dashboard.js';
-import { togglePin, exportNotes, importNotes } from './features.js';
+import { exportNotes, importNotes } from './features.js';
 import { saveNotes } from './storage.js';
 import { showShortcutsPanel } from './shortcuts.js';
 
@@ -32,14 +32,6 @@ function handleShortcut(e) {
     const dash = document.getElementById('notes-dashboard');
     if (dash) dash.remove();
     else showAllNotesDashboard();
-    return;
-  }
-
-  // Ctrl+Shift+P → Pin/unpin the currently focused note
-  if (e.ctrlKey && e.shiftKey && e.key === 'P') {
-    e.preventDefault();
-    const focused = document.querySelector('.sticky-note:focus, .sticky-note:focus-within');
-    if (focused) togglePin(focused);
     return;
   }
 

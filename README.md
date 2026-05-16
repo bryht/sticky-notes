@@ -1,6 +1,6 @@
 # Sticky Notes 📝
 
-A powerful browser extension for creating, managing, and organizing sticky notes on any webpage. Create, color, pin, and manage sticky notes on any website with undo-delete, touch support, and a built-in markdown renderer.
+A powerful browser extension for creating, managing, and organizing sticky notes on any webpage. Create, color, and manage sticky notes on any website with undo-delete, touch support, and a built-in markdown renderer.
 
 ![Sticky Notes Extension](icons/icon128.png)
 
@@ -12,7 +12,6 @@ A powerful browser extension for creating, managing, and organizing sticky notes
 - Drag and reposition notes anywhere on the page (mouse + touch)
 - Resize notes to any dimension
 - Minimize notes to save space
-- Pin notes to keep them on top (`Ctrl+Shift+P`)
 - Choose from 6 colors per note — with hover preview
 - Notes persist when you return to the page
 - Viewport-aware positioning — notes always appear on-screen
@@ -34,7 +33,6 @@ A powerful browser extension for creating, managing, and organizing sticky notes
 |---|---|
 | `Ctrl+Shift+N` | Create new note |
 | `Ctrl+Shift+D` | Toggle dashboard |
-| `Ctrl+Shift+P` | Pin/unpin focused note |
 | `Ctrl+Shift+E` | Export notes |
 | `Ctrl+Shift+I` | Import notes |
 | `Ctrl+S` | Force save |

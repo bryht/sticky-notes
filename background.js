@@ -54,7 +54,6 @@ function migrateStorage(fromVersion, data) {
     Object.keys(allNotes).forEach(noteId => {
       const note = allNotes[noteId];
       if (!note.timestamp) note.timestamp = Date.now();
-      if (note.pinned === undefined) note.pinned = false;
       if (note.markdown === undefined) note.markdown = false;
       if (!note.size) {
         note.size = { width: '200px', height: '150px' };
