@@ -1,7 +1,5 @@
 // Background script for Sticky Notes Extension v2.1.0
 
-const STORAGE_VERSION = 2;
-
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === 'install' || reason === 'update') {
     initializeStorage();
@@ -32,25 +30,24 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 function initializeStorage() {
-  chrome.storage.local.get(['allNotes', 'urlIndex', 'hasDonated', 'storageVersion'], (result) => {
+  const STORAGE_VERSION = 2;
+
+  chrome.storage.local.get(['allNotes', 'urlIndex', 'storageVersion'], (result) => {
     if (!result.allNotes) chrome.storage.local.set({ allNotes: {} });
     if (!result.urlIndex) chrome.storage.local.set({ urlIndex: {} });
-    if (result.hasDonated === undefined) chrome.storage.local.set({ hasDonated: false });
 
-    // Storage migration
     const currentVersion = result.storageVersion || 1;
     if (currentVersion < STORAGE_VERSION) {
-      migrateStorage(currentVersion, result);
+      migrateStorage(currentVersion, result, STORAGE_VERSION);
     }
   });
 }
 
-function migrateStorage(fromVersion, data) {
+function migrateStorage(fromVersion, data, storageVersion) {
   const allNotes = data.allNotes || {};
   const urlIndex = data.urlIndex || {};
 
   if (fromVersion < 2) {
-    // v1 → v2: Add missing fields with defaults
     Object.keys(allNotes).forEach(noteId => {
       const note = allNotes[noteId];
       if (!note.timestamp) note.timestamp = Date.now();
@@ -63,9 +60,9 @@ function migrateStorage(fromVersion, data) {
   chrome.storage.local.set({
     allNotes,
     urlIndex,
-    storageVersion: STORAGE_VERSION
+    storageVersion: storageVersion
   }, () => {
-    console.log(`Sticky Notes: Storage migrated from v${fromVersion} to v${STORAGE_VERSION}`);
+    console.log(`Sticky Notes: Storage migrated from v${fromVersion} to v${storageVersion}`);
   });
 }
 
@@ -83,14 +80,11 @@ updateBadge();
 
 // Click extension icon to create note
 chrome.action.onClicked.addListener((tab) => {
-  // Try to send message to content script; if it fails (content script
-  // not yet loaded), inject the content script and retry.
   chrome.tabs.sendMessage(tab.id, { action: 'createNote' }, (_response) => {
     if (chrome.runtime.lastError) {
-      // Content script not loaded yet — inject and retry
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['contentScript.js']
+        files: ['content.js']
       }).then(() => {
         chrome.tabs.sendMessage(tab.id, { action: 'createNote' }, () => {
           if (chrome.runtime.lastError) {
@@ -108,63 +102,18 @@ chrome.action.onClicked.addListener((tab) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     switch (request.action) {
-      case 'saveNotes':
-        saveNotes(request.url, request.notes).then(() => {
-          updateBadge();
-          sendResponse({ success: true });
-        }).catch(err => sendResponse({ success: false, error: err.message }));
-        return true;
-        
-      case 'getNotes':
-        getNotes(request.url).then(notes => {
-          sendResponse({ notes });
-        }).catch(err => sendResponse({ notes: [], error: err.message }));
-        return true;
-        
-      case 'getAllNotes':
-        getAllNotes().then(notes => {
-          sendResponse({ notes });
-        }).catch(err => sendResponse({ notes: [], error: err.message }));
-        return true;
-        
-      case 'saveSingleNote':
-        saveSingleNote(request.noteId, request.noteData).then(() => {
-          updateBadge();
-          sendResponse({ success: true });
-        }).catch(err => sendResponse({ success: false, error: err.message }));
-        return true;
-        
-      case 'deleteNote':
-        deleteNote(request.noteId, request.url).then(() => {
-          updateBadge();
-          sendResponse({ success: true });
-        }).catch(err => sendResponse({ success: false, error: err.message }));
-        return true;
-        
-      case 'checkPremiumStatus':
-        chrome.storage.local.get(['hasDonated'], (result) => {
-          sendResponse({ isPremium: result.hasDonated === true });
-        });
-        return true;
-        
-      case 'setDonationStatus':
-        chrome.storage.local.set({ hasDonated: request.hasDonated }, () => {
-          sendResponse({ success: true });
-        });
-        return true;
-        
       case 'importNotes':
         importNotes(request.data, request.mode || 'replace').then(() => {
           updateBadge();
           sendResponse({ success: true });
         }).catch(err => sendResponse({ success: false, error: err.message }));
         return true;
-        
+
       case 'updateBadge':
         updateBadge();
         sendResponse({ success: true });
         return false;
-        
+
       default:
         sendResponse({ error: 'Unknown action: ' + request.action });
         return false;
@@ -180,106 +129,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Storage Operations
 // ===================
 
-function get(url, key) {
+function getStorage(keys) {
   return new Promise((resolve) => {
-    chrome.storage.local.get(key ? [key] : null, (result) => {
-      resolve(result);
-    });
+    chrome.storage.local.get(keys, resolve);
   });
 }
 
-function set(data) {
+function setStorage(data) {
   return new Promise((resolve) => {
     chrome.storage.local.set(data, resolve);
   });
 }
 
-async function saveNotes(url, notes) {
-  const result = await get(url, ['allNotes', 'urlIndex']);
-  const allNotes = result.allNotes || {};
-  const urlIndex = result.urlIndex || {};
-  
-  if (!urlIndex[url]) urlIndex[url] = [];
-  
-  // Remove old notes for this URL
-  const previousNoteIds = urlIndex[url];
-  previousNoteIds.forEach(noteId => delete allNotes[noteId]);
-  
-  // Reset and add new notes
-  urlIndex[url] = [];
-  notes.forEach(noteData => {
-    allNotes[noteData.id] = noteData;
-    urlIndex[url].push(noteData.id);
-  });
-  
-  await set({ allNotes, urlIndex });
-}
-
-// Incremental single-note save (avoids race condition from full-page replacement)
-async function saveSingleNote(noteId, noteData) {
-  const result = await get(null, ['allNotes', 'urlIndex']);
-  const allNotes = result.allNotes || {};
-  const urlIndex = result.urlIndex || {};
-  
-  const url = noteData.url;
-  
-  allNotes[noteId] = noteData;
-  
-  if (!urlIndex[url]) urlIndex[url] = [];
-  if (!urlIndex[url].includes(noteId)) {
-    urlIndex[url].push(noteId);
-  }
-  
-  await set({ allNotes, urlIndex });
-}
-
-async function getNotes(url) {
-  const result = await get(url, ['allNotes', 'urlIndex']);
-  const allNotes = result.allNotes || {};
-  const urlIndex = result.urlIndex || {};
-  
-  const notes = [];
-  if (urlIndex[url]) {
-    urlIndex[url].forEach(noteId => {
-      if (allNotes[noteId]) notes.push(allNotes[noteId]);
-    });
-  }
-  return notes;
-}
-
-async function getAllNotes() {
-  const result = await get(null, ['allNotes']);
-  return Object.values(result.allNotes || {});
-}
-
-async function deleteNote(noteId, url) {
-  const result = await get(null, ['allNotes', 'urlIndex']);
-  const allNotes = result.allNotes || {};
-  const urlIndex = result.urlIndex || {};
-  
-  delete allNotes[noteId];
-  
-  if (urlIndex[url]) {
-    urlIndex[url] = urlIndex[url].filter(id => id !== noteId);
-  }
-  
-  await set({ allNotes, urlIndex });
-}
-
 async function importNotes(data, mode = 'replace') {
   if (mode === 'replace') {
-    await set({
-      allNotes: {},
-      urlIndex: {}
-    });
+    await setStorage({ allNotes: {}, urlIndex: {} });
   }
-  
-  const result = mode === 'merge' ? await get(null, ['allNotes', 'urlIndex']) : { allNotes: {}, urlIndex: {} };
+
+  const result = mode === 'merge' ? await getStorage(['allNotes', 'urlIndex']) : { allNotes: {}, urlIndex: {} };
   const allNotes = result.allNotes || {};
   const urlIndex = result.urlIndex || {};
-  
+
   data.notes.forEach(note => {
-    // In merge mode, deduplicate IDs by appending suffix if collision exists
     let noteId = note.id;
     if (mode === 'merge' && allNotes[noteId]) {
       noteId = noteId + '-imported';
@@ -291,6 +162,6 @@ async function importNotes(data, mode = 'replace') {
       urlIndex[note.url].push(noteId);
     }
   });
-  
-  await set({ allNotes, urlIndex });
+
+  await setStorage({ allNotes, urlIndex });
 }

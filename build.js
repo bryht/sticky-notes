@@ -51,6 +51,11 @@ async function packageExtension() {
     fs.copyFileSync(path.join(ROOT, f), path.join(TEMP_DIR, f));
   }
 
+  // Rewrite content.js → contentScript.js in the built background.js
+  let bgCode = fs.readFileSync(path.join(TEMP_DIR, 'background.js'), 'utf8');
+  bgCode = bgCode.replace("files: ['content.js']", "files: ['contentScript.js']");
+  fs.writeFileSync(path.join(TEMP_DIR, 'background.js'), bgCode);
+
   // Copy icons directory
   fs.cpSync(path.join(ROOT, 'icons'), path.join(TEMP_DIR, 'icons'), { recursive: true });
 

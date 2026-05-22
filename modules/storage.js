@@ -1,4 +1,4 @@
-import { SAVE_DEBOUNCE_MS, STORAGE_VERSION } from './config.js';
+import { SAVE_DEBOUNCE_MS } from './config.js';
 
 // Debounce utility
 let saveTimeout = null;
@@ -11,11 +11,12 @@ export function debouncedSave() {
  * Collect all visible notes from the DOM and return as serializable data.
  */
 function collectNotesFromDOM() {
-  const notes = document.querySelectorAll('.sticky-note:not([style*="display: none"])');
+  const notes = document.querySelectorAll('.sticky-note:not([data-pending-delete])');
+  const pendingNotes = document.querySelectorAll('.sticky-note[data-pending-delete]');
   const currentUrl = window.location.href.split('#')[0];
   const currentPageNotes = [];
 
-  notes.forEach(note => {
+  const collectNote = (note) => {
     const contentEl = note.querySelector('.note-content');
     currentPageNotes.push({
       id: note.id,
@@ -27,7 +28,11 @@ function collectNotesFromDOM() {
       url: currentUrl,
       timestamp: Date.now()
     });
-  });
+  };
+
+  notes.forEach(collectNote);
+  // Include pending-delete notes so they survive in storage during the undo window
+  pendingNotes.forEach(collectNote);
 
   return { currentUrl, currentPageNotes };
 }
@@ -110,40 +115,6 @@ export function saveNotes() {
       notifyBackgroundForBadge('updateBadge');
     })
     .catch(err => console.warn('Save failed:', err));
-}
-
-/**
- * Save a single note incrementally (avoids race condition from full-page save).
- * Writes directly to chrome.storage.local.
- */
-export function saveSingleNote(noteId, noteData) {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get(['allNotes', 'urlIndex'], (result) => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      const allNotes = result.allNotes || {};
-      const urlIndex = result.urlIndex || {};
-      const url = noteData.url;
-
-      allNotes[noteId] = noteData;
-
-      if (!urlIndex[url]) urlIndex[url] = [];
-      if (!urlIndex[url].includes(noteId)) {
-        urlIndex[url].push(noteId);
-      }
-
-      chrome.storage.local.set({ allNotes, urlIndex }, () => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          notifyBackgroundForBadge('updateBadge');
-          resolve();
-        }
-      });
-    });
-  }).catch(err => console.warn('Single note save failed:', err));
 }
 
 /**
@@ -232,37 +203,4 @@ export function deleteNoteById(noteId, url) {
       });
     });
   }).catch(err => console.warn('Delete failed:', err));
-}
-
-// ===================
-// Storage Migration
-// ===================
-
-export function migrateStorage() {
-  chrome.storage.local.get(['storageVersion', 'allNotes', 'urlIndex'], (result) => {
-    const currentVersion = result.storageVersion || 1;
-
-    if (currentVersion < 2) {
-      // Migration v1 → v2: Add timestamp field to existing notes
-      const allNotes = result.allNotes || {};
-      const urlIndex = result.urlIndex || {};
-
-      Object.keys(allNotes).forEach(noteId => {
-        const note = allNotes[noteId];
-        // Add missing fields with defaults
-        if (!note.timestamp) note.timestamp = Date.now();
-        if (!note.size) {
-          note.size = { width: '200px', height: '150px' };
-        }
-      });
-
-      chrome.storage.local.set({
-        allNotes,
-        urlIndex,
-        storageVersion: STORAGE_VERSION
-      }, () => {
-        console.log(`Sticky Notes: Storage migrated from v${currentVersion} to v${STORAGE_VERSION}`);
-      });
-    }
-  });
 }

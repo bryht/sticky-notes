@@ -16,7 +16,7 @@ export function withErrorBoundary(fn, context = 'Sticky Notes') {
   }
 }
 
-export function showErrorBanner(error, context = 'Sticky Notes') {
+function showErrorBanner(error, context = 'Sticky Notes') {
   console.error(`[${context}] Error:`, error);
 
   // Remove existing banner
@@ -60,7 +60,7 @@ export function showToast(message, type = 'info', durationOrAction = 3000, durat
   const actionFn = hasAction ? durationOrAction : null;
   const actualDuration = hasAction ? durationMs : (typeof durationOrAction === 'number' ? durationOrAction : 3000);
 
-  const icons = { info: 'ℹ️', success: '✅', error: '❌', warning: '⚠️' };
+  const icons = { info: 'ℹ️', success: '✅', error: '❌' };
   const icon = icons[type] || icons.info;
 
   const toast = document.createElement('div');

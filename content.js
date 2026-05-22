@@ -19,6 +19,9 @@ async function init() {
   notesContainer = createNotesContainer();
   setActiveContainer(notesContainer);
 
+  // Initialize dark mode first so notes are created with correct colors
+  initDarkMode();
+
   // Load notes (applying per-site defaults for new notes)
   loadNotes();
 
@@ -27,7 +30,6 @@ async function init() {
   initKeyboardShortcuts();
   initContextMenu();
   initRichTextToolbar();
-  initDarkMode();
 
   // Save notes immediately before page unload to prevent data loss on refresh
   // Also listen for visibilitychange (fires before beforeunload on tab switch)

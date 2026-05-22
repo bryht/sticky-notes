@@ -69,15 +69,17 @@ export function createNote(content = '', position = null, id = null, options = {
   const note = document.createElement('div');
   note.className = 'sticky-note';
   note.id = noteId;
+  const isMinimized = options.minimized === true;
   note.dataset.color = colorKey;
-  note.dataset.minimized = 'false';
+  note.dataset.minimized = String(isMinimized);
   note.style.cssText = `
     top: ${position.top};
     left: ${position.left};
     width: ${options.width || DEFAULT_NOTE.width};
-    min-height: ${options.minHeight || DEFAULT_NOTE.minHeight};
+    ${isMinimized ? 'height: 32px;' : `min-height: ${options.minHeight || DEFAULT_NOTE.minHeight};`}
     background-color: ${colors.bg};
     z-index: ${++highestZIndex};
+    ${isMinimized ? 'overflow: hidden; resize: none;' : ''}
   `;
 
   // Click to bring to front
@@ -110,8 +112,8 @@ export function createNote(content = '', position = null, id = null, options = {
   
   // Minimize btn
   const minBtn = document.createElement('span');
-  minBtn.innerHTML = '─';
-  minBtn.title = 'Minimize';
+  minBtn.innerHTML = isMinimized ? '□' : '─';
+  minBtn.title = isMinimized ? 'Restore' : 'Minimize';
   minBtn.className = 'note-btn minimize-btn';
   minBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -144,6 +146,7 @@ export function createNote(content = '', position = null, id = null, options = {
   contentArea.className = 'note-content';
   contentArea.contentEditable = true;
   contentArea.innerHTML = sanitizeHTML(content);
+  if (isMinimized) contentArea.style.display = 'none';
   contentArea.addEventListener('input', debouncedSave);
 
   // On resize, save per-site defaults  
@@ -219,34 +222,32 @@ export function deleteNoteElement(note) {
   // Dispatch custom event so other modules can clean up
   note.dispatchEvent(new CustomEvent('note-destroying', { bubbles: true }));
 
-  // Hide the note visually (but keep reference for undo)
+  // Hide the note visually (but keep in storage for undo)
   note.style.display = 'none';
-
-  // Save notes without the hidden one
-  saveNotes();
+  note.dataset.pendingDelete = 'true';
 
   // Show undo toast
   showToast('Note deleted', 'Undo', () => {
     // Undo: restore the note
     if (pendingDeletes.has(noteId)) {
       note.style.display = '';
+      delete note.dataset.pendingDelete;
       if (nextSibling && nextSibling.parentElement === parent) {
         parent.insertBefore(note, nextSibling);
       } else {
         parent.appendChild(note);
       }
-      saveNotes();
       clearTimeout(pendingDeletes.get(noteId).timer);
       pendingDeletes.delete(noteId);
     }
   });
 
-  // Auto-confirm delete after 5 seconds
+  // Auto-confirm delete after 5 seconds: remove from DOM *and* storage
   const timer = setTimeout(() => {
     if (pendingDeletes.has(noteId)) {
-      // Permanently remove from DOM
       note.remove();
       pendingDeletes.delete(noteId);
+      saveNotes();
     }
   }, 5000);
 

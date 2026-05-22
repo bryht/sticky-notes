@@ -636,7 +636,6 @@ body.sticky-notes-dark .dashboard-close {
 .sticky-notes-toast-info { background: #e3f2fd; color: #1565c0; }
 .sticky-notes-toast-success { background: #e8f5e9; color: #2e7d32; }
 .sticky-notes-toast-error { background: #ffebee; color: #c62828; }
-.sticky-notes-toast-warning { background: #fff8e1; color: #e65100; }
 .sticky-notes-toast-fade-out { opacity: 0; transform: translateY(10px); }
 .sticky-notes-toast .toast-icon { font-size: 16px; }
 .sticky-notes-toast .toast-message { flex: 1; }
@@ -658,7 +657,6 @@ body.sticky-notes-dark .dashboard-close {
 body.sticky-notes-dark .sticky-notes-toast-info { background: #1a2e3e; color: #80cbc4; }
 body.sticky-notes-dark .sticky-notes-toast-success { background: #1a3e20; color: #a5d6a7; }
 body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #ef9a9a; }
-body.sticky-notes-dark .sticky-notes-toast-warning { background: #3e3a1a; color: #ffe082; }
 
 /* ── Confirmation Modal ── */
 .sticky-notes-modal-overlay {

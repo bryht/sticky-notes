@@ -1,6 +1,7 @@
 import { getAllNotes, deleteNoteById } from './storage.js';
 import { NOTE_COLORS, DARK_NOTE_COLORS } from './config.js';
 import { toggleDarkMode, getDarkMode } from './darkmode.js';
+import { showToast } from './error.js';
 import { escapeHtml } from './sanitizer.js';
 
 let currentSearchFilter = '';
@@ -38,11 +39,6 @@ export function showAllNotesDashboard() {
     toggleDarkMode();
     darkBtn.innerHTML = getDarkMode() ? '☀️' : '🌙';
     darkBtn.title = getDarkMode() ? 'Switch to Light Mode' : 'Switch to Dark Mode';
-    // Also refresh dashboard dark mode styles
-    const dashContent = dashboard.querySelector('.dashboard-content');
-    if (dashContent) {
-      dashContent.classList.toggle('dashboard-dark', getDarkMode());
-    }
   });
   headerButtons.appendChild(darkBtn);
 
@@ -294,6 +290,8 @@ export function showAllNotesDashboard() {
           noteEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
           noteEl.classList.add('note-highlight');
           setTimeout(() => noteEl.classList.remove('note-highlight'), 2000);
+        } else {
+          showToast('This note is on a different page', 'info');
         }
       }
       return;
