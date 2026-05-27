@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sticky Notes — Browser Extension</title>
-  <meta name="description" content="Create, manage, and organize sticky notes on any webpage. Dark mode, colors, resize, export/import, and more. Free & open source.">
-  <meta property="og:title" content="Sticky Notes — Browser Extension">
-  <meta property="og:description" content="Create, manage, and organize sticky notes on any webpage. Free & open source.">
+  <meta name="description" content="Create, manage, and organize sticky notes on any webpage — with optional encrypted cloud sync across devices. Dark mode, colors, resize, export/import, and more. Free & open source.">
+  <meta property="og:title" content="Sticky Notes — Browser Extension with Cloud Sync">
+  <meta property="og:description" content="Create, manage, and organize sticky notes on any webpage — with optional encrypted cloud sync across devices. Free & open source.">
   <meta property="og:image" content="https://bryht.github.io/sticky-notes/og-image.png">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect x='10' y='10' width='90' height='108' rx='4' fill='%23FFEB3B' stroke='%23F9A825' stroke-width='2'/></svg>">
   <link rel="stylesheet" href="styles.css">
@@ -37,7 +37,7 @@
           View on GitHub
         </a>
       </div>
-      <p class="hero-version">v2.1 · Open Source · MIT License</p>
+      <p class="hero-version">v2.2 · Open Source · MIT License</p>
     </div>
   </section>
 
@@ -46,6 +46,21 @@
     <div class="container">
       <h2>Everything you need, nothing you don't</h2>
       <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">☁️</div>
+          <h3>Cloud Sync</h3>
+          <p>Sync your notes across devices with end-to-end encryption. Your data, everywhere.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔐</div>
+          <h3>AES-256-GCM Encryption</h3>
+          <p>Notes are encrypted on your device before syncing. The server never sees your plaintext data.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚙️</div>
+          <h3>Settings Page</h3>
+          <p>Manage your API key and sync preferences from a dedicated settings page.</p>
+        </div>
         <div class="feature-card">
           <div class="feature-icon">🎨</div>
           <h3>6 Colors</h3>
@@ -88,8 +103,8 @@
         </div>
         <div class="feature-card">
           <div class="feature-icon">🔒</div>
-          <h3>100% Private</h3>
-          <p>All notes stored locally. No servers, no tracking, no data sent anywhere.</p>
+          <h3>Private by Default</h3>
+          <p>Works fully offline with local storage. Cloud sync is optional and end-to-end encrypted.</p>
         </div>
       </div>
     </div>
@@ -163,6 +178,11 @@
           <h3>Come Back</h3>
           <p>Notes are tied to each page URL. Revisit a site and your notes are right where you left them.</p>
         </div>
+        <div class="step">
+          <div class="step-number">5</div>
+          <h3>Sync (Optional)</h3>
+          <p>Enable cloud sync in Settings to access your encrypted notes across all your devices.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -174,16 +194,28 @@
       <p class="section-subtitle">Clean modular architecture, open source, MIT licensed</p>
       <div class="arch-grid">
         <div class="arch-card">
-          <h3>📦 Modular Codebase</h3>
-          <p>v2 split one 740-line file into 7 focused modules — <code>ui.js</code>, <code>drag.js</code>, <code>storage.js</code>, <code>dashboard.js</code>, <code>features.js</code>, <code>config.js</code>, and <code>content.js</code>.</p>
+          <h3>📦 Modular Frontend</h3>
+          <p>17 focused modules — <code>api.js</code>, <code>crypto.js</code>, <code>storage-backend.js</code>, <code>ui.js</code>, <code>drag.js</code>, <code>storage.js</code>, <code>dashboard.js</code>, <code>features.js</code>, and more.</p>
+        </div>
+        <div class="arch-card">
+          <h3>🦀 Rust Backend</h3>
+          <p>Cloud sync server built with <strong>axum</strong> + <strong>PostgreSQL</strong>. Just 3.5 MB binary, 3.7 MB RAM. Self-hostable.</p>
         </div>
         <div class="arch-card">
           <h3>🛡️ Manifest V3</h3>
           <p>Modern Chrome Extension standard with service worker, content scripts, and strict CSP compliance.</p>
         </div>
         <div class="arch-card">
-          <h3>⚡ Build Pipeline</h3>
-          <p>Automated CI/CD via GitHub Actions. Bundles ES modules into a single IIFE for maximum compatibility.</p>
+          <h3>⚡ Build &amp; Deploy Pipeline</h3>
+          <p>Automated CI/CD via GitHub Actions. Extension builds, version bumps, releases, and backend deployment — all automated.</p>
+        </div>
+        <div class="arch-card">
+          <h3>🔐 End-to-End Encryption</h3>
+          <p>Notes encrypted with AES-256-GCM on the client using your API key. Server stores only ciphertext.</p>
+        </div>
+        <div class="arch-card">
+          <h3>🌐 nginx + HTTPS</h3>
+          <p>Reverse proxy with automatic Let's Encrypt SSL. Production-ready deployment config included.</p>
         </div>
       </div>
     </div>
@@ -209,7 +241,7 @@
     <div class="container">
       <p>
         <img src="icon.svg" alt="" width="24" height="24" style="vertical-align: middle;">
-        Sticky Notes v2.1 · 
+        Sticky Notes v2.2 ·
         <a href="https://github.com/bryht/sticky-notes">GitHub</a> · 
         <a href="privacy.html">Privacy Policy</a> · 
         <a href="terms.html">Terms of Service</a> · 
