@@ -31,16 +31,17 @@ pub async fn auth_middleware(
     hasher.update(api_key.as_bytes());
     let api_key_hash = format!("{:x}", hasher.finalize());
 
-    // Look up user in database
+    // Look up or create user in database
     let client = state.pool.get().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let row = client
-        .query_opt(
-            "SELECT id, created_at FROM users WHERE api_key_hash = $1",
+        .query_one(
+            "INSERT INTO users (api_key_hash) VALUES ($1)
+             ON CONFLICT (api_key_hash) DO UPDATE SET api_key_hash = EXCLUDED.api_key_hash
+             RETURNING id, created_at",
             &[&api_key_hash],
         )
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .ok_or(StatusCode::UNAUTHORIZED)?;
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let user_id: Uuid = row.get(0);
 

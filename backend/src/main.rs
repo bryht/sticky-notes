@@ -14,6 +14,8 @@ mod db;
 mod models;
 mod routes;
 
+use auth::auth_middleware;
+
 #[derive(Clone)]
 pub struct AppState {
     pub pool: Pool,
@@ -51,6 +53,7 @@ async fn main() {
     let app = Router::new()
         .route("/notes", get(routes::list_notes).post(routes::create_note))
         .route("/notes/{id}", get(routes::get_note).delete(routes::delete_note))
+        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
         .layer(CorsLayer::permissive())
         .with_state(state);
 
