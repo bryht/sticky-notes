@@ -1,35 +1,146 @@
-name: Build Extension
+name: Build & Release Extension
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm install
 
-      - name: Build extension
-        working-directory: frontend
-        run: npm run build
+    - name: Lint check
+      working-directory: frontend
+      run: npm run lint
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sticky-notes-extension
-          path: frontend/build/*.zip
-          retention-days: 30
+    - name: Run tests
+      working-directory: frontend
+      run: npm test
+
+    # ── Bump version FIRST, before building (only on push to main) ──
+    - name: Bump version and tag
+      if: github.event_name == 'push'
+      id: bump
+      run: |
+        CURRENT_VERSION=$(node -p "require('./frontend/manifest.json').version")
+        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        NEW_PATCH=$((PATCH + 1))
+        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+        # Update manifest.json with new version
+        node -e "
+          const fs = require('fs');
+          const m = JSON.parse(fs.readFileSync('frontend/manifest.json', 'utf8'));
+          m.version = '$NEW_VERSION';
+          fs.writeFileSync('frontend/manifest.json', JSON.stringify(m, null, 2) + '\n');
+        "
+
+        # Check if tag already exists (from a previous failed run) and delete it
+        if git tag -l "v$NEW_VERSION" | grep -q .; then
+          echo "Tag v$NEW_VERSION already exists locally, deleting..."
+          git tag -d "v$NEW_VERSION"
+        fi
+
+        # Commit, tag, and push
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add frontend/manifest.json
+        git commit -m "Bump version to $NEW_VERSION"
+        git tag -a "v$NEW_VERSION" -m "Version $NEW_VERSION"
+
+        # Push commit to main (force to overwrite any previous failed bump)
+        git push --force-with-lease origin HEAD:${{ github.ref_name }}
+        # Push tag (force in case a stale tag exists from a previous run)
+        git push --force origin "v$NEW_VERSION"
+
+    - name: Extract version
+      id: version
+      run: |
+        VERSION=$(node -p "require('./frontend/manifest.json').version")
+        echo "current_version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Build extension
+      working-directory: frontend
+      run: node build.js
+
+    - name: Upload Extension Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: sticky-notes-v${{ steps.version.outputs.current_version }}
+        path: frontend/build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
+        retention-days: 7
+
+    - name: Create GitHub Release
+      if: github.event_name == 'push'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.current_version }}
+        name: v${{ steps.version.outputs.current_version }}
+        body: |
+          Sticky Notes Chrome Extension v${{ steps.version.outputs.current_version }}
+        files: frontend/build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Publish to Chrome Web Store ──
+  publish-webstore:
+    needs: build
+    if: github.event_name == 'push' && vars.CHROME_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Build extension
+      working-directory: frontend
+      run: |
+        npm install
+        node build.js
+
+    - name: Extract current version
+      id: version
+      run: |
+        CURRENT_VERSION=$(node -p "require('./frontend/manifest.json').version")
+        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Publish to Chrome Web Store
+      uses: mtruessel/chrome-webstore-upload-action@v2
+      with:
+        file-path: frontend/build/sticky-notes-v${{ steps.version.outputs.current_version }}.zip
+        extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+        client-id: ${{ secrets.CHROME_CLIENT_ID }}
+        client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+        refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        publish: true
