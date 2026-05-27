@@ -46,7 +46,7 @@ async function packageExtension() {
   await bundleContentScript();
 
   // Copy all necessary files
-  const filesToCopy = ['background.js', 'styles.css'];
+  const filesToCopy = ['background.js', 'styles.css', 'settings.html', 'settings.js'];
   for (const f of filesToCopy) {
     fs.copyFileSync(path.join(ROOT, f), path.join(TEMP_DIR, f));
   }
@@ -56,8 +56,9 @@ async function packageExtension() {
   bgCode = bgCode.replace("files: ['content.js']", "files: ['contentScript.js']");
   fs.writeFileSync(path.join(TEMP_DIR, 'background.js'), bgCode);
 
-  // Copy icons directory
+  // Copy icons and modules directories
   fs.cpSync(path.join(ROOT, 'icons'), path.join(TEMP_DIR, 'icons'), { recursive: true });
+  fs.cpSync(path.join(ROOT, 'modules'), path.join(TEMP_DIR, 'modules'), { recursive: true });
 
   // Update manifest: point content_scripts to the bundled contentScript.js
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
@@ -67,17 +68,26 @@ async function packageExtension() {
   buildManifest.content_scripts[0].js = ['contentScript.js'];
   fs.writeFileSync(path.join(TEMP_DIR, 'manifest.json'), JSON.stringify(buildManifest, null, 2));
 
-  // Create zip using Python (always available) since 'zip' may not be installed
+  // Create zip
   const zipName = `sticky-notes-v${version}.zip`;
   const buildDir = path.join(ROOT, 'build');
   const zipPath = path.join(buildDir, zipName);
+  const isWindows = process.platform === 'win32';
 
-  // Python zip using absolute path (escape single quotes in path)
-  const zipPathEsc = zipPath.replace(/'/g, "'\\''");
-  const tempDirEsc = TEMP_DIR.replace(/'/g, "'\\''");
-
-  try {
-    execSync(`cd '${tempDirEsc}' && python3 -c "
+  if (isWindows) {
+    // Use PowerShell on Windows
+    try {
+      execSync(`powershell -Command "Compress-Archive -Path '${TEMP_DIR}\\*' -DestinationPath '${zipPath}' -Force"`, { stdio: 'pipe' });
+    } catch (e) {
+      console.error('Failed to create zip with PowerShell:', e.message);
+      throw e;
+    }
+  } else {
+    // Use Python on Linux/macOS
+    const zipPathEsc = zipPath.replace(/'/g, "'\\''");
+    const tempDirEsc = TEMP_DIR.replace(/'/g, "'\\''");
+    try {
+      execSync(`cd '${tempDirEsc}' && python3 -c "
 import zipfile, os
 with zipfile.ZipFile('${zipPathEsc}', 'w', zipfile.ZIP_DEFLATED) as zf:
     for root, dirs, files in os.walk('.'):
@@ -85,15 +95,14 @@ with zipfile.ZipFile('${zipPathEsc}', 'w', zipfile.ZIP_DEFLATED) as zf:
             fp = os.path.join(root, f)
             zf.write(fp)
 "`, { stdio: 'pipe' });
-  } catch (e) {
-    console.error('Failed to create zip with Python:', e.message);
-    // Fallback: try zip command
-    console.error('Trying zip command as fallback...');
-    try {
-      execSync(`cd '${tempDirEsc}' && zip -r '${zipPathEsc}' .`, { stdio: 'pipe' });
-    } catch (e2) {
-      console.error('Both zip methods failed. Cannot create package.');
-      throw e2;
+    } catch (e) {
+      console.error('Failed to create zip with Python:', e.message);
+      try {
+        execSync(`cd '${tempDirEsc}' && zip -r '${zipPathEsc}' .`, { stdio: 'pipe' });
+      } catch (e2) {
+        console.error('Both zip methods failed. Cannot create package.');
+        throw e2;
+      }
     }
   }
 
