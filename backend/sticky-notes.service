@@ -1,0 +1,17 @@
+[Unit]
+Description=Sticky Notes Backend
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/sticky-notes
+ExecStart=/opt/sticky-notes/sticky-notes-server
+Restart=on-failure
+RestartSec=5
+Environment=DATABASE_URL=postgres://sticky_notes_user:CHANGE_ME_SECURE_PASSWORD@localhost/sticky_notes
+Environment=PORT=3000
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target

@@ -1,4 +1,8 @@
-build/
-node_modules/
-temp_zip_dir/
+# Frontend (Chrome extension)
+frontend/build/
+frontend/node_modules/
+frontend/temp_zip_dir/
 *.zip
+
+# Backend (Rust server)
+backend/target/

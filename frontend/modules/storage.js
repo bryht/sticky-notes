@@ -1,4 +1,6 @@
 import { SAVE_DEBOUNCE_MS } from './config.js';
+import { getApiKey } from './api.js';
+import { saveNotesToBackend, loadNotesFromBackend } from './storage-backend.js';
 
 // Debounce utility
 let saveTimeout = null;
@@ -66,6 +68,14 @@ function writeNotesToStorage(currentUrl, currentPageNotes) {
         if (chrome.runtime.lastError) {
           reject(chrome.runtime.lastError);
         } else {
+          // Sync to backend if API key is set
+          getApiKey().then(apiKey => {
+            if (apiKey) {
+              saveNotesToBackend(currentUrl, currentPageNotes).catch(err => {
+                console.warn('Backend sync failed:', err.message);
+              });
+            }
+          });
           resolve();
         }
       });
@@ -118,12 +128,49 @@ export function saveNotes() {
 }
 
 /**
- * Load notes for the current URL directly from chrome.storage.local.
- * No background script dependency — works even if the service worker is dormant.
+ * Load notes for the current URL.
+ * If API key is set, loads from backend; otherwise loads from chrome.storage.local.
  */
 export function loadNotes() {
   const currentUrl = window.location.href.split('#')[0];
 
+  // Check if API key is set
+  getApiKey().then(apiKey => {
+    if (apiKey) {
+      // Load from backend
+      loadNotesFromBackend(currentUrl).then(notes => {
+        if (notes.length > 0) {
+          notes.forEach(noteData => {
+            import('./ui.js').then(({ createNote }) => {
+              createNote(
+                noteData.content,
+                noteData.position,
+                noteData.id,
+                {
+                  width: noteData.size?.width,
+                  minHeight: noteData.size?.height,
+                  color: noteData.color,
+                  minimized: noteData.minimized
+                }
+              );
+            }).catch(err => console.warn('Failed to create note:', err));
+          });
+        }
+      }).catch(err => {
+        console.warn('Failed to load from backend, falling back to local storage:', err.message);
+        loadFromLocalStorage(currentUrl);
+      });
+    } else {
+      // Load from local storage
+      loadFromLocalStorage(currentUrl);
+    }
+  });
+}
+
+/**
+ * Load notes from chrome.storage.local (fallback).
+ */
+function loadFromLocalStorage(currentUrl) {
   chrome.storage.local.get(['allNotes', 'urlIndex'], (result) => {
     if (chrome.runtime.lastError) {
       console.warn('Load failed:', chrome.runtime.lastError.message);

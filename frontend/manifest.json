@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Sticky Notes",
+  "version": "2.2.0",
+  "description": "Create, manage, and organize sticky notes on any webpage — with colors, dark mode, search, rich text, and cloud sync!",
+  "permissions": [
+    "storage",
+    "downloads",
+    "contextMenus",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://api.bryht.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Sticky Notes"
+  },
+  "options_page": "settings.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
