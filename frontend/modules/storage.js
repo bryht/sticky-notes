@@ -1,10 +1,19 @@
 import { SAVE_DEBOUNCE_MS } from './config.js';
 import { getApiKey } from './api.js';
 import { saveNotesToBackend, loadNotesFromBackend } from './storage-backend.js';
+import { markPending, markSaving, markSaved, markError } from './save-status.js';
+
+// Until loadNotes() finishes populating the DOM, we must NOT save — an empty
+// DOM at that point would wipe the user's stored notes for this URL.
+// This gate guards against the unload-before-load race that lost notes when
+// the user closed the tab quickly after opening it.
+let notesLoaded = false;
 
 // Debounce utility
 let saveTimeout = null;
 export function debouncedSave() {
+  if (!notesLoaded) return;
+  markPending();
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(saveNotes, SAVE_DEBOUNCE_MS);
 }
@@ -101,13 +110,20 @@ function notifyBackgroundForBadge(action, data = {}) {
  * the browser doesn't kill the tab before the background script replies.
  */
 export function saveNotesNow() {
+  // Guard: don't overwrite stored notes if we never finished loading them
+  if (!notesLoaded) return;
+
   clearTimeout(saveTimeout);
   const { currentUrl, currentPageNotes } = collectNotesFromDOM();
 
+  markSaving();
   // Direct storage write — no async message roundtrip to background script.
-  writeNotesToStorage(currentUrl, currentPageNotes).catch(err => {
-    console.warn('Save failed:', err.message);
-  });
+  writeNotesToStorage(currentUrl, currentPageNotes)
+    .then(markSaved)
+    .catch(err => {
+      markError(err);
+      console.warn('Save failed:', err.message);
+    });
 
   // Also notify background so it can update the badge (fire-and-forget)
   notifyBackgroundForBadge('updateBadge');
@@ -118,52 +134,73 @@ export function saveNotesNow() {
  * Sends a fire-and-forget message to background for badge updates.
  */
 export function saveNotes() {
+  // Guard: don't overwrite stored notes if we never finished loading them
+  if (!notesLoaded) return Promise.resolve();
+
   const { currentUrl, currentPageNotes } = collectNotesFromDOM();
 
+  markSaving();
   return writeNotesToStorage(currentUrl, currentPageNotes)
     .then(() => {
+      markSaved();
       notifyBackgroundForBadge('updateBadge');
     })
-    .catch(err => console.warn('Save failed:', err));
+    .catch(err => {
+      markError(err);
+      console.warn('Save failed:', err);
+    });
 }
 
 /**
  * Load notes for the current URL.
  * If API key is set, loads from backend; otherwise loads from chrome.storage.local.
+ * Resolves once notes are placed in the DOM so the caller knows it's safe to
+ * start saving.
  */
 export function loadNotes() {
   const currentUrl = window.location.href.split('#')[0];
 
-  // Check if API key is set
-  getApiKey().then(apiKey => {
-    if (apiKey) {
-      // Load from backend
-      loadNotesFromBackend(currentUrl).then(notes => {
-        if (notes.length > 0) {
-          notes.forEach(noteData => {
-            import('./ui.js').then(({ createNote }) => {
-              createNote(
-                noteData.content,
-                noteData.position,
-                noteData.id,
-                {
-                  width: noteData.size?.width,
-                  minHeight: noteData.size?.height,
-                  color: noteData.color,
-                  minimized: noteData.minimized
-                }
-              );
-            }).catch(err => console.warn('Failed to create note:', err));
+  return getApiKey()
+    .then(apiKey => {
+      if (apiKey) {
+        return loadNotesFromBackend(currentUrl)
+          .then(notes => renderLoadedNotes(notes))
+          .catch(err => {
+            console.warn('Failed to load from backend, falling back to local storage:', err.message);
+            return loadFromLocalStorage(currentUrl);
           });
+      }
+      return loadFromLocalStorage(currentUrl);
+    })
+    .catch(err => {
+      console.warn('Load failed:', err);
+    })
+    .finally(() => {
+      // Mark loaded even on failure so the user's subsequent edits can save
+      notesLoaded = true;
+    });
+}
+
+/**
+ * Render an array of loaded notes into the DOM and resolve once they're all placed.
+ */
+function renderLoadedNotes(notes) {
+  if (!notes || notes.length === 0) return Promise.resolve();
+
+  return import('./ui.js').then(({ createNote }) => {
+    notes.forEach(noteData => {
+      createNote(
+        noteData.content,
+        noteData.position,
+        noteData.id,
+        {
+          width: noteData.size?.width,
+          minHeight: noteData.size?.height,
+          color: noteData.color,
+          minimized: noteData.minimized
         }
-      }).catch(err => {
-        console.warn('Failed to load from backend, falling back to local storage:', err.message);
-        loadFromLocalStorage(currentUrl);
-      });
-    } else {
-      // Load from local storage
-      loadFromLocalStorage(currentUrl);
-    }
+      );
+    });
   });
 }
 
@@ -171,37 +208,24 @@ export function loadNotes() {
  * Load notes from chrome.storage.local (fallback).
  */
 function loadFromLocalStorage(currentUrl) {
-  chrome.storage.local.get(['allNotes', 'urlIndex'], (result) => {
-    if (chrome.runtime.lastError) {
-      console.warn('Load failed:', chrome.runtime.lastError.message);
-      return;
-    }
-    const allNotes = result.allNotes || {};
-    const urlIndex = result.urlIndex || {};
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['allNotes', 'urlIndex'], (result) => {
+      if (chrome.runtime.lastError) {
+        console.warn('Load failed:', chrome.runtime.lastError.message);
+        resolve();
+        return;
+      }
+      const allNotes = result.allNotes || {};
+      const urlIndex = result.urlIndex || {};
 
-    const noteIds = urlIndex[currentUrl] || [];
-    const notes = [];
-    noteIds.forEach(noteId => {
-      if (allNotes[noteId]) notes.push(allNotes[noteId]);
-    });
-
-    if (notes.length > 0) {
-      notes.forEach(noteData => {
-        import('./ui.js').then(({ createNote }) => {
-          createNote(
-            noteData.content,
-            noteData.position,
-            noteData.id,
-            {
-              width: noteData.size?.width,
-              minHeight: noteData.size?.height,
-              color: noteData.color,
-              minimized: noteData.minimized
-            }
-          );
-        }).catch(err => console.warn('Failed to create note:', err));
+      const noteIds = urlIndex[currentUrl] || [];
+      const notes = [];
+      noteIds.forEach(noteId => {
+        if (allNotes[noteId]) notes.push(allNotes[noteId]);
       });
-    }
+
+      renderLoadedNotes(notes).then(resolve, resolve);
+    });
   });
 }
 
