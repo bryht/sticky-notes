@@ -150,3 +150,16 @@ export async function deleteNote(noteId) {
     method: 'DELETE'
   });
 }
+
+export async function checkHealth() {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch(`${API_BASE}/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch {
+    clearTimeout(timeoutId);
+    return false;
+  }
+}

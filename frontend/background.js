@@ -80,6 +80,32 @@ function updateBadge() {
 
 updateBadge();
 
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  updateBadgeForTab(activeInfo.tabId);
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, _tab) => {
+  if (changeInfo.url) {
+    updateBadgeForTab(tabId);
+  }
+});
+
+function updateBadgeForTab(tabId) {
+  chrome.tabs.get(tabId, (tab) => {
+    if (chrome.runtime.lastError || !tab || !tab.url) return;
+    try {
+      const url = tab.url.split('#')[0];
+      chrome.storage.local.get(['urlIndex'], (result) => {
+        if (chrome.runtime.lastError) return;
+        const urlIndex = result.urlIndex || {};
+        const count = (urlIndex[url] || []).length;
+        chrome.action.setBadgeText({ text: count > 0 ? String(count) : '', tabId: tabId });
+        chrome.action.setBadgeBackgroundColor({ color: count > 0 ? BADGE_COLOR : '#999', tabId: tabId });
+      });
+    } catch(_e) { /* Tab may have been closed */ }
+  });
+}
+
 chrome.action.onClicked.addListener((tab) => {
   chrome.tabs.sendMessage(tab.id, { action: 'createNote' }, (_response) => {
     if (chrome.runtime.lastError) {

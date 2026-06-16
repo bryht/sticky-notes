@@ -1,5 +1,3 @@
-// Configuration and constants
-
 export const NOTE_COLORS = {
   yellow: { bg: '#fff59d', header: '#ffeb3b' },
   pink:   { bg: '#f8bbd0', header: '#f48fb1' },
@@ -9,7 +7,6 @@ export const NOTE_COLORS = {
   white:  { bg: '#ffffff', header: '#e0e0e0' }
 };
 
-// Dark mode color palette — muted but light enough for comfortable reading
 export const DARK_NOTE_COLORS = {
   yellow: { bg: '#5a5028', header: '#7a6e38' },
   pink:   { bg: '#5a2a3a', header: '#7a3a52' },
@@ -28,7 +25,24 @@ export const DEFAULT_NOTE = {
 export const SAVE_DEBOUNCE_MS = 300;
 export const Z_INDEX_BASE = 9998;
 
-// Per-site defaults — get/set preferred note size/color per hostname
+export const NOTE_TEMPLATES = {
+  todo: {
+    name: 'To-Do',
+    icon: '✅',
+    content: '<ul><li>Task 1</li><li>Task 2</li><li>Task 3</li></ul>'
+  },
+  meeting: {
+    name: 'Meeting Notes',
+    icon: '📅',
+    content: '<strong>Date:</strong> <br><strong>Attendees:</strong> <br><br><strong>Agenda:</strong><br><br><strong>Action Items:</strong><br>'
+  },
+  reminder: {
+    name: 'Reminder',
+    icon: '🔔',
+    content: '<strong>Reminder:</strong> <br><strong>When:</strong> <br><strong>Details:</strong> '
+  }
+};
+
 export function getSiteDefaults(hostname) {
   return new Promise((resolve) => {
     chrome.storage.local.get(['siteDefaults'], (result) => {

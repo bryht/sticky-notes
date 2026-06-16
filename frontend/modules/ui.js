@@ -18,7 +18,7 @@ export function setActiveContainer(container) {
 export function createNotesContainer() {
   const existing = document.getElementById('sticky-notes-container');
   if (existing) return existing;
-  
+
   const container = document.createElement('div');
   container.id = 'sticky-notes-container';
   document.body.appendChild(container);
@@ -37,30 +37,27 @@ export function bringToFront(note) {
   note.style.zIndex = highestZIndex;
 }
 
-let batchSaveTimer = null;
-function batchSave() {
-  clearTimeout(batchSaveTimer);
-  batchSaveTimer = setTimeout(() => saveNotes(), 50);
-}
+
 
 export function createNote(content = '', position = null, id = null, options = {}) {
   if (!activeContainer) return null;
-  
+
   const noteId = id || generateId();
-  
+
   if (!position) {
     const existingNotes = document.querySelectorAll('.sticky-note');
-    const offsetAmount = 20 + (existingNotes.length * 10);
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const maxLeft = Math.max(10, vw - 270);
-    const maxTop = Math.max(10, vh - 220);
-    const left = Math.min(80 + offsetAmount, maxLeft);
-    const top = Math.min(80 + offsetAmount, maxTop);
-    position = {
-      top: `${top}px`,
-      left: `${left}px`
-    };
+    const defaultW = 250;
+    const defaultH = 200;
+    const offsetX = 25;
+    const offsetY = 25;
+    const maxCols = Math.floor((vw - 40) / offsetX);
+    const idx = existingNotes.length % Math.max(1, maxCols);
+    const row = Math.floor(existingNotes.length / Math.max(1, maxCols));
+    const left = Math.min(20 + idx * offsetX, Math.max(10, vw - defaultW - 10));
+    const top = Math.min(60 + row * offsetY, Math.max(10, vh - defaultH - 10));
+    position = { top: `${top}px`, left: `${left}px` };
   } else {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -69,11 +66,11 @@ export function createNote(content = '', position = null, id = null, options = {
     position.top = `${Math.min(topVal, Math.max(10, vh - 220))}px`;
     position.left = `${Math.min(leftVal, Math.max(10, vw - 270))}px`;
   }
-  
+
   const colorKey = options.color || DEFAULT_NOTE.color;
   const palette = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
   const colors = palette[colorKey] || palette.yellow;
-  
+
   const note = document.createElement('div');
   note.className = 'sticky-note';
   note.id = noteId;
@@ -93,20 +90,34 @@ export function createNote(content = '', position = null, id = null, options = {
   `;
 
   note.addEventListener('mousedown', () => bringToFront(note));
-  
+
   const header = document.createElement('div');
   header.className = 'note-header';
   header.style.backgroundColor = colors.header;
-  
+
   const title = document.createElement('span');
   title.className = 'note-title';
   title.textContent = options.title || '';
   header.appendChild(title);
-  
+
   const buttons = document.createElement('div');
   buttons.className = 'note-buttons';
   buttons.setAttribute('role', 'toolbar');
   buttons.setAttribute('aria-label', 'Note actions');
+
+  const pinBtn = document.createElement('button');
+  pinBtn.type = 'button';
+  pinBtn.innerHTML = '📌';
+  pinBtn.title = 'Pin on top';
+  pinBtn.className = 'note-btn pin-btn';
+  pinBtn.setAttribute('aria-label', 'Pin on top');
+  pinBtn.setAttribute('tabindex', '0');
+  pinBtn.style.minWidth = '24px';
+  pinBtn.style.minHeight = '24px';
+  pinBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePin(note, pinBtn);
+  });
 
   const colorBtn = document.createElement('button');
   colorBtn.type = 'button';
@@ -115,11 +126,13 @@ export function createNote(content = '', position = null, id = null, options = {
   colorBtn.className = 'note-btn';
   colorBtn.setAttribute('aria-label', 'Change color');
   colorBtn.setAttribute('tabindex', '0');
+  colorBtn.style.minWidth = '24px';
+  colorBtn.style.minHeight = '24px';
   colorBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     showColorPicker(note);
   });
-  
+
   const minBtn = document.createElement('button');
   minBtn.type = 'button';
   minBtn.innerHTML = isMinimized ? '□' : '─';
@@ -127,6 +140,8 @@ export function createNote(content = '', position = null, id = null, options = {
   minBtn.className = 'note-btn minimize-btn';
   minBtn.setAttribute('aria-label', isMinimized ? 'Restore' : 'Minimize');
   minBtn.setAttribute('tabindex', '0');
+  minBtn.style.minWidth = '24px';
+  minBtn.style.minHeight = '24px';
   minBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     if (note.dataset.minimized === 'true') {
@@ -135,7 +150,7 @@ export function createNote(content = '', position = null, id = null, options = {
       minimizeNote(note, minBtn);
     }
   });
-  
+
   const dashBtn = document.createElement('button');
   dashBtn.type = 'button';
   dashBtn.innerHTML = '☰';
@@ -143,8 +158,10 @@ export function createNote(content = '', position = null, id = null, options = {
   dashBtn.className = 'note-btn';
   dashBtn.setAttribute('aria-label', 'View all notes');
   dashBtn.setAttribute('tabindex', '0');
+  dashBtn.style.minWidth = '24px';
+  dashBtn.style.minHeight = '24px';
   dashBtn.addEventListener('click', () => showAllNotesDashboard());
-  
+
   const delBtn = document.createElement('button');
   delBtn.type = 'button';
   delBtn.innerHTML = '✕';
@@ -152,17 +169,20 @@ export function createNote(content = '', position = null, id = null, options = {
   delBtn.className = 'note-btn delete-btn';
   delBtn.setAttribute('aria-label', 'Delete note');
   delBtn.setAttribute('tabindex', '0');
+  delBtn.style.minWidth = '24px';
+  delBtn.style.minHeight = '24px';
   delBtn.addEventListener('click', () => deleteNoteElement(note));
-  
-  buttons.append(colorBtn, minBtn, dashBtn, delBtn);
+
+  buttons.append(pinBtn, colorBtn, minBtn, dashBtn, delBtn);
   header.appendChild(buttons);
-  
+
   const contentArea = document.createElement('div');
   contentArea.className = 'note-content';
   contentArea.contentEditable = true;
   contentArea.setAttribute('role', 'textbox');
   contentArea.setAttribute('aria-label', 'Note content');
   contentArea.setAttribute('aria-multiline', 'true');
+  contentArea.setAttribute('data-placeholder', 'Click here to type...');
   contentArea.innerHTML = sanitizeHTML(content);
   if (isMinimized) contentArea.style.display = 'none';
   contentArea.addEventListener('focus', () => setSaveStatusTarget(saveStatus));
@@ -174,7 +194,7 @@ export function createNote(content = '', position = null, id = null, options = {
   note.addEventListener('resized', () => {
     saveSiteDefault(note);
   });
-  
+
   const footer = document.createElement('div');
   footer.className = 'note-footer';
 
@@ -192,6 +212,12 @@ export function createNote(content = '', position = null, id = null, options = {
     const len = text.length;
     charCount.textContent = len > 0 ? `${len}` : '';
     charCount.title = `${len} character${len === 1 ? '' : 's'}`;
+    charCount.classList.remove('char-warn', 'char-danger');
+    if (len >= 50000) {
+      charCount.classList.add('char-danger');
+    } else if (len >= 5000) {
+      charCount.classList.add('char-warn');
+    }
   };
   updateCharCount();
 
@@ -201,14 +227,36 @@ export function createNote(content = '', position = null, id = null, options = {
   note.appendChild(header);
   note.appendChild(contentArea);
   note.appendChild(footer);
-  
+
   activeContainer.appendChild(note);
-  
+
   makeDraggable(note, header);
   addResizeHandle(note, footer);
-  
-  batchSave();
+
+  debouncedSave();
   return note;
+}
+
+export function togglePin(note, btn) {
+  const isPinned = note.dataset.pinned === 'true';
+  if (isPinned) {
+    note.dataset.pinned = 'false';
+    note.classList.remove('pinned');
+    btn.innerHTML = '📌';
+    btn.title = 'Pin on top';
+    btn.setAttribute('aria-label', 'Pin on top');
+    btn.style.opacity = '';
+    note.style.zIndex = ++highestZIndex;
+  } else {
+    note.dataset.pinned = 'true';
+    note.classList.add('pinned');
+    btn.innerHTML = '📌';
+    btn.title = 'Unpin';
+    btn.setAttribute('aria-label', 'Unpin');
+    btn.style.opacity = '1';
+    note.style.zIndex = Z_INDEX_BASE + 2000000;
+  }
+  debouncedSave();
 }
 
 async function saveSiteDefault(note, colorKey) {
@@ -237,11 +285,15 @@ export function deleteNoteElement(note) {
 
   note.dispatchEvent(new CustomEvent('note-destroying', { bubbles: true }));
 
-  note.style.display = 'none';
-  note.dataset.pendingDelete = 'true';
+  note.classList.add('deleting');
+  setTimeout(() => {
+    note.style.display = 'none';
+    note.dataset.pendingDelete = 'true';
+  }, 200);
 
   showToast('Note deleted', 'Undo', () => {
     if (pendingDeletes.has(noteId)) {
+      note.classList.remove('deleting');
       note.style.display = '';
       delete note.dataset.pendingDelete;
       if (nextSibling && nextSibling.parentElement === parent) {
@@ -272,16 +324,22 @@ export function cleanupPendingDelete(noteId) {
   }
 }
 
-export function updateNoteColor(note, colorKey) {
-  if (!NOTE_COLORS[colorKey]) return;
-
+export function updateNoteColor(note, colorKey, customHeaderColor) {
   const palette = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
-  const colors = palette[colorKey] || NOTE_COLORS[colorKey];
+  let bg, header;
+
+  if (palette[colorKey]) {
+    bg = palette[colorKey].bg;
+    header = palette[colorKey].header;
+  } else {
+    bg = colorKey;
+    header = customHeaderColor || colorKey;
+  }
 
   note.dataset.color = colorKey;
-  note.style.backgroundColor = colors.bg;
-  const header = note.querySelector('.note-header');
-  if (header) header.style.backgroundColor = colors.header;
+  note.style.backgroundColor = bg;
+  const noteHeader = note.querySelector('.note-header');
+  if (noteHeader) noteHeader.style.backgroundColor = header;
 
   saveSiteDefault(note, colorKey);
   saveNotes();

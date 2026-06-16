@@ -1,15 +1,9 @@
-// Rich Text Toolbar for Sticky Notes
-// Provides a floating mini-toolbar (Bold, Italic, Bullet, Link) that appears
-// only when the formatting button in the note header is clicked.
-// The toolbar floats on top of the text — it never shifts note content.
-
 let activeToolbar = null;
 
 export function initRichTextToolbar() {
   const container = document.getElementById('sticky-notes-container');
   if (!container) return;
 
-  // Add the formatting button to every note (existing and future)
   container.querySelectorAll('.sticky-note').forEach(attachFormatButton);
 
   const observer = new MutationObserver((mutations) => {
@@ -23,7 +17,6 @@ export function initRichTextToolbar() {
   });
   observer.observe(container, { childList: true });
 
-  // Close toolbar when clicking outside
   document.addEventListener('mousedown', (e) => {
     if (activeToolbar && !activeToolbar.contains(e.target) &&
         !e.target.classList.contains('rt-toggle-btn')) {
@@ -32,17 +25,13 @@ export function initRichTextToolbar() {
   });
 }
 
-/**
- * Inject a formatting button (A̲) into the note header's button row.
- * Clicking it toggles the floating toolbar popup.
- */
 function attachFormatButton(note) {
   const buttons = note.querySelector('.note-buttons');
   if (!buttons || buttons.querySelector('.rt-toggle-btn')) return;
 
   const fmtBtn = document.createElement('span');
-  fmtBtn.innerHTML = 'A̲';
-  fmtBtn.title = 'Formatting';
+  fmtBtn.innerHTML = 'B';
+  fmtBtn.title = 'Bold formatting';
   fmtBtn.className = 'note-btn rt-toggle-btn';
   fmtBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -50,18 +39,14 @@ function attachFormatButton(note) {
       hideToolbar();
     } else {
       const content = note.querySelector('.note-content');
-      if (content) showToolbar(note, content, fmtBtn);
+      if (content) showToolbar(note, content);
     }
   });
 
-  // Insert as the first button so it's easy to find
   buttons.insertBefore(fmtBtn, buttons.firstChild);
 }
 
-/**
- * Create and position the floating toolbar popup next to the format button.
- */
-function showToolbar(note, noteContent, anchorBtn) {
+function showToolbar(note, noteContent) {
   hideToolbar();
 
   const toolbar = document.createElement('div');
@@ -72,7 +57,7 @@ function showToolbar(note, noteContent, anchorBtn) {
     { label: '<strong>B</strong>', action: () => execFormat('bold'), title: 'Bold (Ctrl+B)' },
     { label: '<em>I</em>', action: () => execFormat('italic'), title: 'Italic (Ctrl+I)' },
     { label: '• List', action: () => applyBulletList(noteContent), title: 'Bullet List' },
-    { label: '🔗', action: () => insertLink(), title: 'Insert Link' },
+    { label: '🔗', action: () => insertLink(noteContent), title: 'Insert Link' },
   ];
 
   buttons.forEach(({ label, action, title }) => {
@@ -91,7 +76,6 @@ function showToolbar(note, noteContent, anchorBtn) {
 
   note.appendChild(toolbar);
 
-  // Position the toolbar below the header
   const header = note.querySelector('.note-header');
   if (header) {
     const headerH = header.offsetHeight;
@@ -108,13 +92,6 @@ function hideToolbar() {
   }
 }
 
-// ── Formatting helpers ─────────────────────────────────────────────────────
-
-/**
- * Run a simple execCommand (bold / italic). The selection is saved before
- * the toolbar steals focus and restored before executing the command so
- * that execCommand operates on the correct range.
- */
 let savedRange = null;
 
 function saveSelection() {
@@ -139,33 +116,78 @@ function execFormat(command) {
   document.execCommand(command, false, null);
 }
 
-function insertLink() {
+function insertLink(noteContent) {
   saveSelection();
-  restoreSelection();
-  const url = self.prompt('Enter URL:');
-  if (url) {
-    document.execCommand('createLink', false, url);
-  }
+
+  const note = noteContent.closest('.sticky-note');
+  if (!note) return;
+
+  const existing = note.querySelector('.sticky-notes-link-input');
+  if (existing) existing.remove();
+
+  const footer = note.querySelector('.note-footer');
+  if (!footer) return;
+
+  const bar = document.createElement('div');
+  bar.className = 'sticky-notes-link-input';
+
+  const input = document.createElement('input');
+  input.type = 'url';
+  input.placeholder = 'Paste or type a URL...';
+  input.setAttribute('aria-label', 'Enter URL');
+
+  const applyBtn = document.createElement('button');
+  applyBtn.textContent = 'Apply';
+  applyBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (input.value.trim()) {
+      restoreSelection();
+      document.execCommand('createLink', false, input.value.trim());
+    }
+    bar.remove();
+  });
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.className = 'link-cancel';
+  cancelBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    bar.remove();
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (input.value.trim()) {
+        restoreSelection();
+        document.execCommand('createLink', false, input.value.trim());
+      }
+      bar.remove();
+    } else if (e.key === 'Escape') {
+      bar.remove();
+    }
+  });
+
+  bar.appendChild(input);
+  bar.appendChild(applyBtn);
+  bar.appendChild(cancelBtn);
+  footer.appendChild(bar);
+  input.focus();
 }
 
-/**
- * Toggle a bullet list on the current selection.
- * Uses execCommand with a manual DOM-manipulation fallback for browsers
- * where execCommand('insertUnorderedList') is unreliable or disabled.
- */
 function applyBulletList(noteContent) {
   saveSelection();
   restoreSelection();
 
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || !noteContent.contains(sel.anchorNode)) {
-    // No valid selection inside the note — create a default bullet
     const ul = document.createElement('ul');
     const li = document.createElement('li');
-    li.textContent = '​'; // zero-width space as placeholder
+    li.textContent = '​';
     ul.appendChild(li);
     noteContent.appendChild(ul);
-    // Place caret inside the new li
     const range = document.createRange();
     range.selectNodeContents(li);
     range.collapse(false);
@@ -174,7 +196,6 @@ function applyBulletList(noteContent) {
     return;
   }
 
-  // If the selection is already inside a list, unwrap it (toggle off)
   const anchorLi = sel.anchorNode.nodeType === Node.ELEMENT_NODE
     ? sel.anchorNode.closest?.('li') ?? sel.anchorNode.parentElement?.closest('li')
     : sel.anchorNode.parentElement?.closest('li');
@@ -182,7 +203,6 @@ function applyBulletList(noteContent) {
   if (anchorLi && noteContent.contains(anchorLi)) {
     const parentList = anchorLi.parentElement;
     if (parentList && (parentList.tagName === 'UL' || parentList.tagName === 'OL')) {
-      // Unwrap: replace each <li> with its text content + <br>
       const fragment = document.createDocumentFragment();
       Array.from(parentList.children).forEach((li) => {
         const textNode = document.createTextNode(li.textContent || '');
@@ -195,18 +215,14 @@ function applyBulletList(noteContent) {
     }
   }
 
-  // Try execCommand first (works in most Chromium versions)
   const result = document.execCommand('insertUnorderedList', false, null);
 
-  // Verify it actually created a list
   const hasList = !!noteContent.querySelector('ul, ol');
   if (result && hasList) {
     noteContent.focus();
     return;
   }
 
-  // ── Manual fallback ──────────────────────────────────────────────────────
-  // Build a <ul> from the selected lines
   const range = sel.getRangeAt(0);
   const selectedText = range.toString();
 
@@ -221,7 +237,6 @@ function applyBulletList(noteContent) {
   range.deleteContents();
   range.insertNode(ul);
 
-  // Place caret after the inserted list
   const afterRange = document.createRange();
   afterRange.setStartAfter(ul);
   afterRange.collapse(true);

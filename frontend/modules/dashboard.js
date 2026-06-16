@@ -7,6 +7,8 @@ import { escapeHtml } from './sanitizer.js';
 let currentSearchFilter = '';
 let selectedRowIndex = -1;
 let tableRows = [];
+let sortedNotes = [];
+let currentSort = 'date-desc';
 const NOTES_PER_PAGE = 25;
 let currentPage = 1;
 let searchDebounceTimer = null;
@@ -20,22 +22,55 @@ function isSafeURL(url) {
   }
 }
 
+function sortNotes(notes) {
+  const sorted = [...notes];
+  switch (currentSort) {
+    case 'date-asc':
+      sorted.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      break;
+    case 'color':
+      sorted.sort((a, b) => (a.color || 'yellow').localeCompare(b.color || 'yellow'));
+      break;
+    case 'url':
+      sorted.sort((a, b) => {
+        let ha = '', hb = '';
+        try { ha = new URL(a.url).hostname; } catch(e) { /* ignore */ }
+        try { hb = new URL(b.url).hostname; } catch(e) { /* ignore */ }
+        return ha.localeCompare(hb);
+      });
+      break;
+    case 'date-desc':
+    default:
+      sorted.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      break;
+  }
+  return sorted;
+}
+
+function highlightMatch(text, filter) {
+  if (!filter) return escapeHtml(text);
+  const escaped = escapeHtml(text);
+  const regex = new RegExp(`(${filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return escaped.replace(regex, '<mark class="sn-highlight">$1</mark>');
+}
+
 export function showAllNotesDashboard() {
   currentPage = 1;
+  currentSort = 'date-desc';
   const existing = document.getElementById('notes-dashboard');
   if (existing) existing.remove();
-  
+
   const dashboard = document.createElement('div');
   dashboard.id = 'notes-dashboard';
   dashboard.setAttribute('role', 'dialog');
   dashboard.setAttribute('aria-label', 'All Notes Dashboard');
-  
+
   const content = document.createElement('div');
   content.className = 'dashboard-content';
-  
+
   const header = document.createElement('div');
   header.className = 'dashboard-header';
-  
+
   const title = document.createElement('h2');
   title.textContent = 'All Notes';
 
@@ -61,7 +96,7 @@ export function showAllNotesDashboard() {
   closeBtn.setAttribute('aria-label', 'Close dashboard');
   closeBtn.addEventListener('click', () => dashboard.remove());
   headerButtons.appendChild(closeBtn);
-  
+
   header.append(title, headerButtons);
   content.appendChild(header);
 
@@ -95,13 +130,49 @@ export function showAllNotesDashboard() {
   });
   searchBar.appendChild(searchInput);
   searchBar.appendChild(clearBtn);
+
+  const searchCount = document.createElement('span');
+  searchCount.className = 'dashboard-search-count';
+  searchCount.id = 'dashboard-search-count';
+  searchBar.appendChild(searchCount);
+
   content.appendChild(searchBar);
-  
+
+  const sortBar = document.createElement('div');
+  sortBar.className = 'dashboard-sort';
+  sortBar.style.cssText = 'display:flex;gap:8px;padding:4px 20px;border-bottom:1px solid #eee;font-size:13px;';
+
+  const sorts = [
+    { key: 'date-desc', label: 'Newest' },
+    { key: 'date-asc', label: 'Oldest' },
+    { key: 'color', label: 'Color' },
+    { key: 'url', label: 'Page' },
+  ];
+
+  sorts.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'dash-btn' + (s.key === currentSort ? ' dash-btn-active' : '');
+    btn.textContent = s.label;
+    btn.style.cssText = s.key === currentSort ? 'background:#e3f2fd;color:#1565c0;border-color:#1976d2;' : '';
+    btn.addEventListener('click', () => {
+      currentSort = s.key;
+      sortBar.querySelectorAll('.dash-btn').forEach(b => {
+        b.style.cssText = '';
+      });
+      btn.style.cssText = 'background:#e3f2fd;color:#1565c0;border-color:#1976d2;';
+      sortedNotes = sortNotes(sortedNotes);
+      renderTable();
+    });
+    sortBar.appendChild(btn);
+  });
+  content.appendChild(sortBar);
+
   const list = document.createElement('div');
   list.className = 'dashboard-list';
+  list.id = 'dashboard-list';
   list.innerHTML = '<p class="dashboard-loading">Loading notes...</p>';
   content.appendChild(list);
-  
+
   const toolbar = document.createElement('div');
   toolbar.className = 'dashboard-toolbar';
   toolbar.innerHTML = `
@@ -111,10 +182,10 @@ export function showAllNotesDashboard() {
   toolbar.querySelector('#dash-export').addEventListener('click', () => import('./features.js').then(m => m.exportNotes()));
   toolbar.querySelector('#dash-import').addEventListener('click', () => import('./features.js').then(m => m.importNotes()));
   content.appendChild(toolbar);
-  
+
   dashboard.appendChild(content);
   document.body.appendChild(dashboard);
-  
+
   dashboard.addEventListener('click', (e) => {
     if (e.target === dashboard) dashboard.remove();
   });
@@ -122,17 +193,30 @@ export function showAllNotesDashboard() {
   dashboard.addEventListener('keydown', handleDashboardKeyboard);
   dashboard.tabIndex = -1;
   dashboard.focus();
-  
+
   getAllNotes().then(notes => {
-    list.innerHTML = '';
-    
     if (notes.length === 0) {
-      list.innerHTML = '<p class="dashboard-empty">No notes found.</p>';
+      list.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'dashboard-empty';
+      empty.innerHTML = `
+        <div style="font-size:40px;margin-bottom:12px;">📝</div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px;">No notes yet</div>
+        <div style="font-size:14px;color:#888;margin-bottom:16px;">Click the Sticky Notes icon or press Ctrl+Shift+N to create your first note.</div>
+      `;
+      list.appendChild(empty);
       return;
     }
-    
-    notes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    
+
+    sortedNotes = sortNotes(notes);
+    renderTable();
+  });
+
+  function renderTable() {
+    const listEl = document.getElementById('dashboard-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
     const table = document.createElement('table');
     table.className = 'dashboard-table';
     table.setAttribute('role', 'grid');
@@ -146,16 +230,16 @@ export function showAllNotesDashboard() {
         </tr>
       </thead>
     `;
-    
+
     const tbody = document.createElement('tbody');
     tableRows = [];
 
     const textCache = new Map();
 
-    notes.forEach(note => {
+    sortedNotes.forEach(note => {
       const tr = document.createElement('tr');
       tr.setAttribute('role', 'row');
-      
+
       if (!textCache.has(note.id)) {
         const temp = document.createElement('div');
         temp.innerHTML = note.content || '';
@@ -163,26 +247,26 @@ export function showAllNotesDashboard() {
       }
       const text = textCache.get(note.id);
       const preview = text.substring(0, 80) + (text.length > 80 ? '...' : '');
-      
+
       let hostname = 'unknown';
       try {
         hostname = new URL(note.url).hostname;
-      } catch(e) {
-        // Invalid URL
-      }
-      
+      } catch(e) { /* Invalid URL */ }
+
       const palette = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
       const color = palette[note.color]?.bg || palette.yellow.bg;
 
       const safeHref = isSafeURL(note.url) ? note.url : '#';
 
+      const contentHtml = currentSearchFilter ? highlightMatch(preview, currentSearchFilter) : escapeHtml(preview);
+
       tr.innerHTML = `
-        <td class="dash-content">${escapeHtml(preview)}</td>
+        <td class="dash-content">${contentHtml}</td>
         <td><a href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer">${escapeHtml(hostname)}</a></td>
         <td><span class="color-swatch" style="background:${color}" aria-label="${escapeHtml(note.color || 'yellow')}"></span></td>
         <td><button class="dash-delete-btn" data-id="${escapeHtml(note.id)}" data-url="${escapeHtml(note.url)}">Delete</button></td>
       `;
-      
+
       const delBtn = tr.querySelector('.dash-delete-btn');
       delBtn.addEventListener('click', () => {
         deleteNoteById(note.id, note.url).then(() => {
@@ -190,26 +274,27 @@ export function showAllNotesDashboard() {
           if (el) el.remove();
           tr.remove();
           tableRows = tableRows.filter(r => r !== tr);
+          sortedNotes = sortedNotes.filter(n => n.id !== note.id);
           filterNotes();
           renderPagination();
         });
       });
-      
+
       tbody.appendChild(tr);
       tableRows.push({ row: tr, note: note, textContent: text });
     });
-    
+
     table.appendChild(tbody);
-    list.appendChild(table);
+    listEl.appendChild(table);
 
     const paginationDiv = document.createElement('div');
     paginationDiv.className = 'dashboard-pagination';
     paginationDiv.id = 'dashboard-pagination';
-    list.appendChild(paginationDiv);
+    listEl.appendChild(paginationDiv);
 
     if (currentSearchFilter) filterNotes();
     renderPagination();
-  });
+  }
 
   function filterNotes() {
     const filter = currentSearchFilter;
@@ -217,12 +302,16 @@ export function showAllNotesDashboard() {
       let hostname = '';
       try { hostname = new URL(note.url).hostname; } catch(e) { /* Invalid URL */ }
 
-      const match = !filter || 
-        textContent.toLowerCase().includes(filter) || 
+      const match = !filter ||
+        textContent.toLowerCase().includes(filter) ||
         hostname.toLowerCase().includes(filter);
       row.style.display = match ? '' : 'none';
       row.dataset.filterHidden = match ? '' : 'true';
     });
+
+    const matchCount = tableRows.filter(({ row }) => row.dataset.filterHidden !== 'true').length;
+    const countEl = document.getElementById('dashboard-search-count');
+    if (countEl) countEl.textContent = filter ? `${matchCount} match${matchCount !== 1 ? 'es' : ''}` : '';
   }
 
   function renderPagination() {
@@ -323,6 +412,7 @@ export function showAllNotesDashboard() {
           if (el) el.remove();
           row.remove();
           tableRows = tableRows.filter(r => r.row !== row);
+          sortedNotes = sortedNotes.filter(n => n.id !== note.id);
           selectedRowIndex = Math.max(0, selectedRowIndex - 1);
           renderPagination();
         });

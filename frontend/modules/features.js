@@ -37,17 +37,17 @@ export function addResizeHandle(note, footer) {
   handle.setAttribute('aria-label', 'Resize note');
   handle.setAttribute('tabindex', '0');
   footer.appendChild(handle);
-  
+
   handle.addEventListener('mousedown', (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (note.dataset.minimized === 'true') return;
-    
+
     const startX = e.clientX;
     const startY = e.clientY;
     const startW = note.offsetWidth;
     const startH = note.offsetHeight;
-    
+
     function onMove(ev) {
       ev.preventDefault();
       const newW = Math.max(150, startW + (ev.clientX - startX));
@@ -55,14 +55,14 @@ export function addResizeHandle(note, footer) {
       note.style.width = newW + 'px';
       note.style.height = newH + 'px';
     }
-    
+
     function onUp() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       saveNotes();
       note.dispatchEvent(new CustomEvent('resized'));
     }
-    
+
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   });
@@ -71,7 +71,7 @@ export function addResizeHandle(note, footer) {
 export function showColorPicker(note) {
   const existing = note.querySelector('.color-picker-popup');
   if (existing) { existing.remove(); return; }
-  
+
   const picker = document.createElement('div');
   picker.className = 'color-picker-popup';
   picker.setAttribute('role', 'listbox');
@@ -79,10 +79,7 @@ export function showColorPicker(note) {
 
   const colorMap = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
   const currentColor = note.dataset.color || 'yellow';
-  const origColors = colorMap[currentColor] || colorMap.yellow;
-  const origBg = origColors.bg;
-  const origHeaderBg = origColors.header;
-  
+
   let onOutsideClick = null;
   let noteDestroyHandler = null;
   const cleanup = () => {
@@ -115,28 +112,47 @@ export function showColorPicker(note) {
       }
     });
     swatch.addEventListener('mouseenter', () => {
-      note.style.backgroundColor = colors.bg;
-      const header = note.querySelector('.note-header');
-      if (header) header.style.backgroundColor = colors.header;
+      swatch.style.transform = 'scale(1.15)';
+      swatch.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.3)';
     });
     swatch.addEventListener('mouseleave', () => {
-      note.style.backgroundColor = origBg;
-      const header = note.querySelector('.note-header');
-      if (header) header.style.backgroundColor = origHeaderBg;
+      swatch.style.transform = '';
+      swatch.style.boxShadow = '';
     });
     picker.appendChild(swatch);
   });
-  
+
+  const activeSwatch = picker.querySelector(`.color-swatch[aria-selected="true"]`);
+  if (activeSwatch) {
+    activeSwatch.style.boxShadow = '0 0 0 2px var(--sn-primary, #1976d2)';
+  }
+
+  const customSwatch = document.createElement('div');
+  customSwatch.className = 'color-custom-swatch';
+  customSwatch.title = 'Custom color';
+  customSwatch.textContent = '+';
+  const colorInput = document.createElement('input');
+  colorInput.type = 'color';
+  colorInput.value = '#ffeb3b';
+  colorInput.addEventListener('input', (e) => {
+    const hex = e.target.value;
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const darkerHex = '#' + [r, g, b].map(c => Math.max(0, Math.round(c * 0.85)).toString(16).padStart(2, '0')).join('');
+    updateNoteColor(note, hex, darkerHex);
+    cleanup();
+  });
+  customSwatch.appendChild(colorInput);
+  picker.appendChild(customSwatch);
+
   onOutsideClick = (e) => {
     const header = note.querySelector('.note-header');
     if (!picker.contains(e.target) && !(header && header.contains(e.target))) {
-      note.style.backgroundColor = origBg;
-      const header = note.querySelector('.note-header');
-      if (header) header.style.backgroundColor = origHeaderBg;
       cleanup();
     }
   };
-  
+
   document.addEventListener('click', onOutsideClick);
   note.appendChild(picker);
 }
@@ -149,7 +165,7 @@ export async function exportNotes() {
       exportedAt: new Date().toISOString(),
       notes: notes
     };
-    
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -159,7 +175,7 @@ export async function exportNotes() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     chrome.runtime.sendMessage({ action: 'updateBadge' });
   } catch (err) {
     console.error('Export failed:', err);
@@ -171,7 +187,7 @@ export function importNotes() {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.json';
-  
+
   input.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -180,22 +196,22 @@ export function importNotes() {
       showToast(`File too large (max ${Math.round(MAX_IMPORT_FILE_SIZE / 1024 / 1024)}MB)`, 'error');
       return;
     }
-    
+
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      
+
       if (!data.notes || !Array.isArray(data.notes)) {
         showToast('Invalid backup file format', 'error');
         return;
       }
-      
+
       const validation = validateImportData(data);
       if (!validation.valid) {
         showToast('Invalid import: ' + validation.error, 'error');
         return;
       }
-      
+
       const confirmed = await showConfirmModal(
         `Import ${data.notes.length} notes? This will REPLACE all existing notes.`,
         {
@@ -206,9 +222,9 @@ export function importNotes() {
         }
       );
       const mode = confirmed ? 'replace' : 'merge';
-      
+
       document.querySelectorAll('.sticky-note').forEach(el => el.remove());
-      
+
       await new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({
           action: 'importNotes',
@@ -219,7 +235,7 @@ export function importNotes() {
           else resolve(response);
         });
       });
-      
+
       data.notes
         .filter(n => {
           try {
@@ -234,19 +250,19 @@ export function importNotes() {
             minHeight: n.size?.height
           });
         });
-      
+
       const dash = document.getElementById('notes-dashboard');
       if (dash) {
         dash.remove();
         showAllNotesDashboard();
       }
-      
+
       showToast(`Successfully imported ${data.notes.length} notes!`, 'success');
     } catch (err) {
       console.error('Import failed:', err);
       showToast('Import failed: ' + err.message, 'error');
     }
   });
-  
+
   input.click();
 }

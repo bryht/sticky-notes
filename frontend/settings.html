@@ -60,7 +60,32 @@
       margin-top: 4px;
     }
 
-    input[type="text"] {
+    .api-key-wrapper {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .api-key-wrapper input {
+      flex: 1;
+    }
+
+    .toggle-visibility-btn {
+      background: none;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .toggle-visibility-btn:hover {
+      background: #f0f0f0;
+    }
+
+    input[type="text"],
+    input[type="password"] {
       width: 100%;
       padding: 12px;
       border: 1px solid #ddd;
@@ -70,14 +95,42 @@
       transition: border-color 0.2s;
     }
 
-    input[type="text"]:focus {
+    input[type="text"]:focus,
+    input[type="password"]:focus {
       outline: none;
       border-color: #4CAF50;
     }
 
-    input[type="text"]:disabled {
+    input[type="text"]:disabled,
+    input[type="password"]:disabled {
       background: #f5f5f5;
       color: #999;
+    }
+
+    .sync-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .sync-status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .sync-status-dot.connected {
+      background: #4CAF50;
+    }
+
+    .sync-status-dot.disconnected {
+      background: #f44336;
     }
 
     .button-group {
@@ -125,6 +178,16 @@
       background: #da190b;
     }
 
+    .btn-outline {
+      background: white;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+
+    .btn-outline:hover {
+      background: #f5f5f5;
+    }
+
     .status {
       margin-top: 16px;
       padding: 12px;
@@ -154,6 +217,24 @@
       font-size: 13px;
       color: #1565C0;
     }
+
+    .danger-zone {
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .danger-zone h3 {
+      font-size: 16px;
+      color: #d32f2f;
+      margin-bottom: 8px;
+    }
+
+    .danger-zone p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 12px;
+    }
   </style>
 </head>
 <body>
@@ -165,18 +246,33 @@
       <strong>Note:</strong> Your API key is used for both authentication and encryption. Keep it secure and don't share it. If you lose your key, you won't be able to access your encrypted notes.
     </div>
 
+    <div class="sync-status">
+      <span class="sync-status-dot disconnected" id="syncStatusDot"></span>
+      <span id="syncStatusText">Checking...</span>
+    </div>
+
     <div class="form-group">
       <label for="apiKey">API Key</label>
-      <input type="text" id="apiKey" placeholder="Enter your API key" autocomplete="off">
+      <div class="api-key-wrapper">
+        <input type="password" id="apiKey" placeholder="Enter your API key" autocomplete="off">
+        <button class="toggle-visibility-btn" id="toggleVisibility" title="Toggle visibility">👁️</button>
+      </div>
       <p class="help-text">Leave blank to use local storage only (no cloud sync)</p>
     </div>
 
     <div class="button-group">
       <button class="btn-primary" id="saveBtn">Save Settings</button>
       <button class="btn-secondary" id="generateBtn">Generate New Key</button>
+      <button class="btn-outline" id="testConnection">Test Connection</button>
     </div>
 
     <div class="status" id="status"></div>
+
+    <div class="danger-zone">
+      <h3>Danger Zone</h3>
+      <p>Permanently delete all synced data from the cloud. This cannot be undone.</p>
+      <button class="btn-danger" id="deleteAllSyncedBtn">Delete All Synced Data</button>
+    </div>
   </div>
 
   <script type="module" src="settings.js"></script>
