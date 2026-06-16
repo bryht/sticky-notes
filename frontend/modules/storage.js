@@ -11,11 +11,21 @@ let notesLoaded = false;
 
 // Debounce utility
 let saveTimeout = null;
+// True once an edit has scheduled a save that hasn't fired yet. Gates
+// markPending() so it's called once per debounce window — not once per
+// keystroke — keeping the save-status counter balanced with markSaved().
+let savePending = false;
 export function debouncedSave() {
   if (!notesLoaded) return;
-  markPending();
+  if (!savePending) {
+    savePending = true;
+    markPending();
+  }
   clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(saveNotes, SAVE_DEBOUNCE_MS);
+  saveTimeout = setTimeout(() => {
+    savePending = false;
+    saveNotes();
+  }, SAVE_DEBOUNCE_MS);
 }
 
 /**

@@ -679,29 +679,33 @@ body.sticky-notes-dark .sticky-notes-toast-info { background: #1a2e3e; color: #8
 body.sticky-notes-dark .sticky-notes-toast-success { background: #1a3e20; color: #a5d6a7; }
 body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #ef9a9a; }
 
-/* Save status pill — tells the user whether a save is still in flight */
-.sticky-notes-save-status {
-  position: fixed;
-  bottom: 14px;
-  left: 14px;
-  z-index: 2147483647;
-  padding: 5px 12px;
-  border-radius: 999px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-  font-size: 12px;
+/* Save status — shown in the footer of the note being edited,
+   tells the user whether a save is still in flight */
+.note-footer .note-save-status {
+  position: absolute;
+  left: 10px;
+  bottom: 2px;
+  font-size: 10px;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  line-height: 1;
+  white-space: nowrap;
   pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
-.sticky-notes-save-status-saving { background: #fff8e1; color: #8d6e00; }
-.sticky-notes-save-status-saved  { background: #e8f5e9; color: #2e7d32; }
-.sticky-notes-save-status-error  { background: #ffebee; color: #c62828; pointer-events: auto; }
-.sticky-notes-save-status-hidden { opacity: 0; transform: translateY(4px); }
+.note-footer .note-save-status-saving,
+.note-footer .note-save-status-saved,
+.note-footer .note-save-status-error {
+  opacity: 1;
+}
+.note-footer .note-save-status-saving { color: #8d6e00; }
+.note-footer .note-save-status-saved  { color: #2e7d32; }
+.note-footer .note-save-status-error  { color: #c62828; pointer-events: auto; }
 
-body.sticky-notes-dark .sticky-notes-save-status-saving { background: #3e361a; color: #ffd180; }
-body.sticky-notes-dark .sticky-notes-save-status-saved  { background: #1a3e20; color: #a5d6a7; }
-body.sticky-notes-dark .sticky-notes-save-status-error  { background: #3e1a1a; color: #ef9a9a; }
+.dark-mode .note-footer .note-save-status-saving { color: #ffd180; }
+.dark-mode .note-footer .note-save-status-saved  { color: #a5d6a7; }
+.dark-mode .note-footer .note-save-status-error  { color: #ef9a9a; }
 
 /* ── Confirmation Modal ── */
 .sticky-notes-modal-overlay {

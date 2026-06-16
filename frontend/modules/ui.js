@@ -1,6 +1,7 @@
 import { NOTE_COLORS, DARK_NOTE_COLORS, DEFAULT_NOTE, Z_INDEX_BASE, getSiteDefaults, setSiteDefaults } from './config.js';
 import { makeDraggable } from './drag.js';
 import { saveNotes, debouncedSave } from './storage.js';
+import { setSaveStatusTarget } from './save-status.js';
 import { showToast } from './error.js';
 import { showAllNotesDashboard } from './dashboard.js';
 import { minimizeNote, restoreNote, addResizeHandle, showColorPicker } from './features.js';
@@ -147,7 +148,11 @@ export function createNote(content = '', position = null, id = null, options = {
   contentArea.contentEditable = true;
   contentArea.innerHTML = sanitizeHTML(content);
   if (isMinimized) contentArea.style.display = 'none';
-  contentArea.addEventListener('input', debouncedSave);
+  contentArea.addEventListener('focus', () => setSaveStatusTarget(saveStatus));
+  contentArea.addEventListener('input', () => {
+    setSaveStatusTarget(saveStatus);
+    debouncedSave();
+  });
 
   // On resize, save per-site defaults  
   note.addEventListener('resized', () => {
@@ -157,6 +162,13 @@ export function createNote(content = '', position = null, id = null, options = {
   // Footer with resize handle and character count
   const footer = document.createElement('div');
   footer.className = 'note-footer';
+
+  // Per-note save indicator (Saving… / Saved / Save failed)
+  const saveStatus = document.createElement('span');
+  saveStatus.className = 'note-save-status';
+  saveStatus.setAttribute('role', 'status');
+  saveStatus.setAttribute('aria-live', 'polite');
+  footer.appendChild(saveStatus);
 
   const charCount = document.createElement('span');
   charCount.className = 'note-char-count';
