@@ -1,13 +1,7 @@
-/**
- * API client for Sticky Notes backend.
- */
-
 const API_BASE = 'https://api.bryht.net/stick-notes';
+const REQUEST_TIMEOUT_MS = 15000;
+const MAX_RETRIES = 2;
 
-/**
- * Get the API key from chrome.storage.sync.
- * @returns {Promise<string|null>} The API key or null if not set
- */
 export async function getApiKey() {
   return new Promise((resolve) => {
     chrome.storage.sync.get(['apiKey'], (result) => {
@@ -21,14 +15,12 @@ export async function getApiKey() {
   });
 }
 
-/**
- * Set the API key in chrome.storage.sync.
- * @param {string} apiKey - The API key to store
- * @returns {Promise<void>}
- */
 export async function setApiKey(apiKey) {
+  if (apiKey && (typeof apiKey !== 'string' || apiKey.trim().length === 0)) {
+    throw new Error('API key must be a non-empty string');
+  }
   return new Promise((resolve, reject) => {
-    chrome.storage.sync.set({ apiKey }, () => {
+    chrome.storage.sync.set({ apiKey: apiKey || '' }, () => {
       if (chrome.runtime.lastError) {
         reject(chrome.runtime.lastError);
         return;
@@ -38,12 +30,6 @@ export async function setApiKey(apiKey) {
   });
 }
 
-/**
- * Make an authenticated API request.
- * @param {string} endpoint - The API endpoint (e.g., '/notes')
- * @param {Object} options - Fetch options (method, body, etc.)
- * @returns {Promise<any>} The response data
- */
 async function apiRequest(endpoint, options = {}) {
   const apiKey = await getApiKey();
   if (!apiKey) {
@@ -57,28 +43,82 @@ async function apiRequest(endpoint, options = {}) {
     ...options.headers
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers
-  });
+  let lastError;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `API request failed: ${response.status}`);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(error.error || `API request failed: ${response.status}`);
+      }
+
+      if (response.status === 204) {
+        return null;
+      }
+
+      const text = await response.text();
+      if (!text) return null;
+      return JSON.parse(text);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      lastError = err;
+
+      if (err.name === 'AbortError') {
+        lastError = new Error(`Request timed out after ${REQUEST_TIMEOUT_MS}ms`);
+      }
+
+      if (attempt < MAX_RETRIES && (err.name === 'AbortError' || err.name === 'TypeError')) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+
+      throw lastError;
+    }
   }
 
-  if (response.status === 204) {
-    return null; // No content
-  }
-
-  return response.json();
+  throw lastError;
 }
 
-/**
- * Create a new note.
- * @param {Object} note - The note data
- * @returns {Promise<Object>} The created note
- */
+export async function registerAccount(apiKey) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${API_BASE}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || `Registration failed: ${response.status}`);
+    }
+
+    return data;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error(`Registration request timed out after ${REQUEST_TIMEOUT_MS}ms`);
+    }
+    throw err;
+  }
+}
+
 export async function createNote(note) {
   return apiRequest('/notes', {
     method: 'POST',
@@ -86,29 +126,18 @@ export async function createNote(note) {
   });
 }
 
-/**
- * Get all notes for the current user.
- * @returns {Promise<Array>} List of notes
- */
-export async function listNotes() {
-  return apiRequest('/notes');
+export async function listNotes(params = {}) {
+  const query = new URLSearchParams();
+  if (params.limit) query.set('limit', String(params.limit));
+  if (params.offset) query.set('offset', String(params.offset));
+  const qs = query.toString();
+  return apiRequest(`/notes${qs ? '?' + qs : ''}`);
 }
 
-/**
- * Get a specific note by ID.
- * @param {string} noteId - The note ID
- * @returns {Promise<Object>} The note
- */
 export async function getNote(noteId) {
   return apiRequest(`/notes/${noteId}`);
 }
 
-/**
- * Update a note.
- * @param {string} noteId - The note ID
- * @param {Object} updates - The fields to update
- * @returns {Promise<Object>} The updated note
- */
 export async function updateNote(noteId, updates) {
   return apiRequest(`/notes/${noteId}`, {
     method: 'PUT',
@@ -116,11 +145,6 @@ export async function updateNote(noteId, updates) {
   });
 }
 
-/**
- * Delete a note.
- * @param {string} noteId - The note ID
- * @returns {Promise<void>}
- */
 export async function deleteNote(noteId) {
   return apiRequest(`/notes/${noteId}`, {
     method: 'DELETE'

@@ -1,11 +1,8 @@
-// Background script for Sticky Notes Extension v2.1.0
-
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === 'install' || reason === 'update') {
     initializeStorage();
   }
 
-  // Register context menu
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: 'save-to-sticky-note',
@@ -15,7 +12,6 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
   });
 });
 
-// Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'save-to-sticky-note' && info.selectionText) {
     chrome.tabs.sendMessage(tab.id, {
@@ -29,10 +25,17 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-function initializeStorage() {
-  const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 2;
+const BADGE_COLOR = '#FF9800';
+const DEFAULT_NOTE_SIZE = { width: '200px', height: '150px' };
+const MAX_IMPORT_NOTES = 10000;
 
+function initializeStorage() {
   chrome.storage.local.get(['allNotes', 'urlIndex', 'storageVersion'], (result) => {
+    if (chrome.runtime.lastError) {
+      console.error('initializeStorage failed:', chrome.runtime.lastError);
+      return;
+    }
     if (!result.allNotes) chrome.storage.local.set({ allNotes: {} });
     if (!result.urlIndex) chrome.storage.local.set({ urlIndex: {} });
 
@@ -52,7 +55,7 @@ function migrateStorage(fromVersion, data, storageVersion) {
       const note = allNotes[noteId];
       if (!note.timestamp) note.timestamp = Date.now();
       if (!note.size) {
-        note.size = { width: '200px', height: '150px' };
+        note.size = { ...DEFAULT_NOTE_SIZE };
       }
     });
   }
@@ -66,19 +69,17 @@ function migrateStorage(fromVersion, data, storageVersion) {
   });
 }
 
-// Update badge with note count
 function updateBadge() {
   chrome.storage.local.get(['allNotes'], (result) => {
+    if (chrome.runtime.lastError) return;
     const count = Object.keys(result.allNotes || {}).length;
     chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' });
-    chrome.action.setBadgeBackgroundColor({ color: '#FF9800' });
+    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLOR });
   });
 }
 
-// Initial badge update
 updateBadge();
 
-// Click extension icon to create note
 chrome.action.onClicked.addListener((tab) => {
   chrome.tabs.sendMessage(tab.id, { action: 'createNote' }, (_response) => {
     if (chrome.runtime.lastError) {
@@ -98,7 +99,6 @@ chrome.action.onClicked.addListener((tab) => {
   });
 });
 
-// Message router
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     switch (request.action) {
@@ -125,10 +125,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// ===================
-// Storage Operations
-// ===================
-
 function getStorage(keys) {
   return new Promise((resolve) => {
     chrome.storage.local.get(keys, resolve);
@@ -142,6 +138,14 @@ function setStorage(data) {
 }
 
 async function importNotes(data, mode = 'replace') {
+  if (!data || !Array.isArray(data.notes)) {
+    throw new Error('Invalid import data: notes must be an array');
+  }
+
+  if (data.notes.length > MAX_IMPORT_NOTES) {
+    throw new Error(`Too many notes to import (max ${MAX_IMPORT_NOTES})`);
+  }
+
   if (mode === 'replace') {
     await setStorage({ allNotes: {}, urlIndex: {} });
   }
@@ -153,7 +157,7 @@ async function importNotes(data, mode = 'replace') {
   data.notes.forEach(note => {
     let noteId = note.id;
     if (mode === 'merge' && allNotes[noteId]) {
-      noteId = noteId + '-imported';
+      noteId = noteId + '-imported-' + Date.now();
       note.id = noteId;
     }
     allNotes[noteId] = note;

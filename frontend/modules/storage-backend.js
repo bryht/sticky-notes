@@ -1,17 +1,29 @@
-/**
- * Backend storage integration for Sticky Notes.
- * Replaces chrome.storage.local with backend API calls.
- */
-
 import { encrypt, decrypt } from './crypto.js';
-import { createNote, listNotes, deleteNote, getApiKey } from './api.js';
+import { createNote, listNotes, deleteNote, updateNote, getApiKey } from './api.js';
 
-/**
- * Save all current page notes to the backend.
- * This deletes all existing notes for the current URL and creates new ones.
- * @param {string} currentUrl - The current page URL
- * @param {Array} currentPageNotes - Array of note objects from DOM
- */
+const syncQueue = [];
+let isProcessingQueue = false;
+
+function enqueueSync(action) {
+  syncQueue.push(action);
+  if (!isProcessingQueue) {
+    processSyncQueue();
+  }
+}
+
+async function processSyncQueue() {
+  isProcessingQueue = true;
+  while (syncQueue.length > 0) {
+    const action = syncQueue.shift();
+    try {
+      await action();
+    } catch (err) {
+      console.warn('Sync queue action failed:', err.message);
+    }
+  }
+  isProcessingQueue = false;
+}
+
 export async function saveNotesToBackend(currentUrl, currentPageNotes) {
   const apiKey = await getApiKey();
   if (!apiKey) {
@@ -19,42 +31,66 @@ export async function saveNotesToBackend(currentUrl, currentPageNotes) {
     return;
   }
 
-  try {
-    // Get existing notes for this URL from backend
+  const doSync = async () => {
     const existingNotes = await listNotes();
     const urlNotes = existingNotes.filter(note => note.url === currentUrl);
+    const existingMap = new Map();
+    urlNotes.forEach(n => existingMap.set(n.url + '|' + n.color + '|' + JSON.stringify(n.position), n));
 
-    // Delete existing notes for this URL
-    for (const note of urlNotes) {
-      await deleteNote(note.id);
-    }
+    const newNoteKeys = new Set();
+    const createdNotes = [];
 
-    // Create new notes
     for (const noteData of currentPageNotes) {
       const encryptedContent = await encrypt(noteData.content, apiKey);
+      const key = currentUrl + '|' + noteData.color + '|' + JSON.stringify(noteData.position);
+      newNoteKeys.add(key);
 
-      await createNote({
+      const payload = {
         content: JSON.stringify(encryptedContent),
         position: noteData.position,
         size: noteData.size,
         color: noteData.color,
         minimized: noteData.minimized,
-        url: noteData.url  // URL is stored plaintext for filtering
-      });
+        url: noteData.url
+      };
+
+      const existing = existingMap.get(key);
+      if (existing) {
+        try {
+          await updateNote(existing.id, payload);
+        } catch (err) {
+          console.warn('Update failed for note, creating new:', err.message);
+          await createNote(payload);
+        }
+      } else {
+        createdNotes.push(createNote(payload));
+      }
     }
 
+    await Promise.all(createdNotes);
+
+    const deletePromises = [];
+    for (const note of urlNotes) {
+      const key = note.url + '|' + note.color + '|' + JSON.stringify(note.position);
+      if (!newNoteKeys.has(key)) {
+        deletePromises.push(deleteNote(note.id).catch(err => {
+          console.warn('Delete failed for note:', err.message);
+        }));
+      }
+    }
+    await Promise.all(deletePromises);
+
     console.log(`Saved ${currentPageNotes.length} notes to backend`);
+  };
+
+  try {
+    await doSync();
   } catch (error) {
-    console.error('Failed to save notes to backend:', error);
-    throw error;
+    console.error('Failed to save notes to backend, queuing retry:', error);
+    enqueueSync(doSync);
   }
 }
 
-/**
- * Load notes for the current URL from the backend.
- * @param {string} currentUrl - The current page URL
- * @returns {Promise<Array>} Array of decrypted note objects
- */
 export async function loadNotesFromBackend(currentUrl) {
   const apiKey = await getApiKey();
   if (!apiKey) {
@@ -65,12 +101,10 @@ export async function loadNotesFromBackend(currentUrl) {
   try {
     const allNotes = await listNotes();
 
-    // Filter notes for this URL (URL is plaintext) and decrypt content
     const decryptedNotes = [];
     for (const note of allNotes) {
       if (note.url === currentUrl) {
         try {
-          // Decrypt content
           const encryptedContent = JSON.parse(note.content);
           const decryptedContent = await decrypt(encryptedContent, apiKey);
 
@@ -86,7 +120,6 @@ export async function loadNotesFromBackend(currentUrl) {
           });
         } catch (decryptError) {
           console.warn('Failed to decrypt note:', decryptError);
-          // Skip notes that can't be decrypted
         }
       }
     }

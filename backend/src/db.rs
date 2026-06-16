@@ -5,18 +5,16 @@ use crate::models::{Note, CreateNoteRequest, UpdateNoteRequest};
 pub async fn run_migrations(pool: &Pool) -> Result<(), Box<dyn std::error::Error>> {
     let client = pool.get().await?;
 
-    // Create users table
     client
         .batch_execute(
             "CREATE TABLE IF NOT EXISTS users (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                api_key_hash VARCHAR(64) NOT NULL UNIQUE,
+                api_key_hash TEXT NOT NULL UNIQUE,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );",
         )
         .await?;
 
-    // Create stick_notes_records table
     client
         .batch_execute(
             "CREATE TABLE IF NOT EXISTS stick_notes_records (
@@ -34,15 +32,38 @@ pub async fn run_migrations(pool: &Pool) -> Result<(), Box<dyn std::error::Error
         )
         .await?;
 
-    // Create indexes
     client
         .batch_execute(
             "CREATE INDEX IF NOT EXISTS idx_stick_notes_records_user_id ON stick_notes_records(user_id);
-             CREATE INDEX IF NOT EXISTS idx_stick_notes_records_url ON stick_notes_records(url);",
+             CREATE INDEX IF NOT EXISTS idx_stick_notes_records_user_url ON stick_notes_records(user_id, url);
+             CREATE INDEX IF NOT EXISTS idx_stick_notes_records_updated_at ON stick_notes_records(updated_at DESC);",
         )
         .await?;
 
     Ok(())
+}
+
+pub async fn create_user(pool: &Pool, api_key_hash: &str) -> Result<Uuid, Box<dyn std::error::Error>> {
+    let client = pool.get().await?;
+    let row = client
+        .query_one(
+            "INSERT INTO users (api_key_hash) VALUES ($1) RETURNING id",
+            &[&api_key_hash],
+        )
+        .await?;
+    Ok(row.get(0))
+}
+
+pub async fn user_exists_by_hash(pool: &Pool, api_key_hash: &str) -> Result<bool, Box<dyn std::error::Error>> {
+    let client = pool.get().await?;
+    let row = client
+        .query_one(
+            "SELECT COUNT(*) FROM users WHERE api_key_hash = $1",
+            &[&api_key_hash],
+        )
+        .await?;
+    let count: i64 = row.get(0);
+    Ok(count > 0)
 }
 
 pub async fn create_note(
@@ -68,47 +89,28 @@ pub async fn create_note(
         )
         .await?;
 
-    Ok(Note {
-        id: row.get(0),
-        user_id: row.get(1),
-        content: row.get(2),
-        position: row.get(3),
-        size: row.get(4),
-        color: row.get(5),
-        minimized: row.get(6),
-        url: row.get(7),
-        created_at: row.get(8),
-        updated_at: row.get(9),
-    })
+    Ok(Note::from(row))
 }
 
-pub async fn list_notes(pool: &Pool, user_id: Uuid) -> Result<Vec<Note>, Box<dyn std::error::Error>> {
+pub async fn list_notes(
+    pool: &Pool,
+    user_id: Uuid,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<Note>, Box<dyn std::error::Error>> {
     let client = pool.get().await?;
     let rows = client
         .query(
             "SELECT id, user_id, content, position, size, color, minimized, url, created_at, updated_at
              FROM stick_notes_records
              WHERE user_id = $1
-             ORDER BY updated_at DESC",
-            &[&user_id],
+             ORDER BY updated_at DESC
+             LIMIT $2 OFFSET $3",
+            &[&user_id, &limit, &offset],
         )
         .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|row| Note {
-            id: row.get(0),
-            user_id: row.get(1),
-            content: row.get(2),
-            position: row.get(3),
-            size: row.get(4),
-            color: row.get(5),
-            minimized: row.get(6),
-            url: row.get(7),
-            created_at: row.get(8),
-            updated_at: row.get(9),
-        })
-        .collect())
+    Ok(rows.into_iter().map(Note::from).collect())
 }
 
 pub async fn get_note(
@@ -126,18 +128,7 @@ pub async fn get_note(
         )
         .await?;
 
-    Ok(row.map(|row| Note {
-        id: row.get(0),
-        user_id: row.get(1),
-        content: row.get(2),
-        position: row.get(3),
-        size: row.get(4),
-        color: row.get(5),
-        minimized: row.get(6),
-        url: row.get(7),
-        created_at: row.get(8),
-        updated_at: row.get(9),
-    }))
+    Ok(row.map(Note::from))
 }
 
 pub async fn update_note(
@@ -148,39 +139,38 @@ pub async fn update_note(
 ) -> Result<Option<Note>, Box<dyn std::error::Error>> {
     let client = pool.get().await?;
 
-    // Build dynamic update query
     let mut updates = Vec::new();
-    let mut params: Vec<Box<dyn tokio_postgres::types::ToSql + Sync>> = Vec::new();
+    let mut values: Vec<Box<dyn tokio_postgres::types::ToSql + Sync + Send>> = Vec::new();
     let mut param_idx = 1;
 
     if let Some(content) = req.content {
         updates.push(format!("content = ${}", param_idx));
-        params.push(Box::new(content));
+        values.push(Box::new(content));
         param_idx += 1;
     }
     if let Some(position) = req.position {
         updates.push(format!("position = ${}", param_idx));
-        params.push(Box::new(position));
+        values.push(Box::new(position));
         param_idx += 1;
     }
     if let Some(size) = req.size {
         updates.push(format!("size = ${}", param_idx));
-        params.push(Box::new(size));
+        values.push(Box::new(size));
         param_idx += 1;
     }
     if let Some(color) = req.color {
         updates.push(format!("color = ${}", param_idx));
-        params.push(Box::new(color));
+        values.push(Box::new(color));
         param_idx += 1;
     }
     if let Some(minimized) = req.minimized {
         updates.push(format!("minimized = ${}", param_idx));
-        params.push(Box::new(minimized));
+        values.push(Box::new(minimized));
         param_idx += 1;
     }
     if let Some(url) = req.url {
         updates.push(format!("url = ${}", param_idx));
-        params.push(Box::new(url));
+        values.push(Box::new(url));
         param_idx += 1;
     }
 
@@ -200,26 +190,15 @@ pub async fn update_note(
         param_idx + 1
     );
 
-    params.push(Box::new(note_id));
-    params.push(Box::new(user_id));
+    values.push(Box::new(note_id));
+    values.push(Box::new(user_id));
 
-    let param_refs: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> =
-        params.iter().map(|p| p.as_ref()).collect();
+    let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> =
+        values.iter().map(|p| p.as_ref() as &(dyn tokio_postgres::types::ToSql + Sync)).collect();
 
-    let row = client.query_opt(&query, &param_refs).await?;
+    let row = client.query_opt(&query, &params).await?;
 
-    Ok(row.map(|row| Note {
-        id: row.get(0),
-        user_id: row.get(1),
-        content: row.get(2),
-        position: row.get(3),
-        size: row.get(4),
-        color: row.get(5),
-        minimized: row.get(6),
-        url: row.get(7),
-        created_at: row.get(8),
-        updated_at: row.get(9),
-    }))
+    Ok(row.map(Note::from))
 }
 
 pub async fn delete_note(

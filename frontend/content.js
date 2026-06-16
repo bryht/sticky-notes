@@ -1,6 +1,3 @@
-// Sticky Notes Extension - v2.1.0
-// Main entry point
-
 import { createNotesContainer, createNote, setActiveContainer } from './modules/ui.js';
 import { initDragCleanup } from './modules/drag.js';
 import { loadNotes, saveNotesNow } from './modules/storage.js';
@@ -10,46 +7,42 @@ import { initRichTextToolbar } from './modules/richtext.js';
 import { initDarkMode } from './modules/darkmode.js';
 import { withErrorBoundary } from './modules/error.js';
 
-
 let notesContainer = null;
+let savingBeforeUnload = false;
 
 async function init() {
-  // Storage migration is handled by background.js on install/update
-  
   notesContainer = createNotesContainer();
   setActiveContainer(notesContainer);
 
-  // Initialize dark mode first so notes are created with correct colors
   initDarkMode();
 
-  // Load notes (applying per-site defaults for new notes)
-  loadNotes();
+  await loadNotes();
 
-  // Initialize features
   initDragCleanup();
   initKeyboardShortcuts();
   initContextMenu();
   initRichTextToolbar();
 
-  // Save notes immediately before page unload to prevent data loss on refresh
-  // Also listen for visibilitychange (fires before beforeunload on tab switch)
   window.addEventListener('beforeunload', () => {
-    saveNotesNow();
-  });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
+    if (!savingBeforeUnload) {
+      savingBeforeUnload = true;
       saveNotesNow();
     }
   });
-  
-  // Add listener for extension icon clicks
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && !savingBeforeUnload) {
+      savingBeforeUnload = true;
+      saveNotesNow();
+      setTimeout(() => { savingBeforeUnload = false; }, 500);
+    }
+  });
+
   chrome.runtime.onMessage.addListener(
     function(request, sender, sendResponse) {
       if (request.action === 'createNote') {
         createNote();
         sendResponse({success: true});
       }
-      // Handle context menu text selection
       if (request.action === 'createNoteWithText') {
         createNote(request.text || '');
         sendResponse({success: true});
@@ -59,7 +52,6 @@ async function init() {
   );
 }
 
-// Start the extension with error boundary
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => withErrorBoundary(init, 'Sticky Notes Init'));
 } else {

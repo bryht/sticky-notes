@@ -1,6 +1,36 @@
-/* Sticky Notes Extension - v2.1.0 Styles */
+:root {
+  --sn-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  --sn-font-size: 14px;
+  --sn-line-height: 1.45;
+  --sn-text-color: #333;
+  --sn-text-muted: #999;
+  --sn-border-color: #ddd;
+  --sn-bg-white: #fff;
+  --sn-bg-light: #fafafa;
+  --sn-bg-hover: rgba(0, 0, 0, 0.08);
+  --sn-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
+  --sn-shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.22);
+  --sn-danger: #d32f2f;
+  --sn-danger-dark: #c62828;
+  --sn-primary: #1976d2;
+  --sn-primary-light: #e3f2fd;
+  --sn-success: #2e7d32;
+  --sn-warning: #8d6e00;
+  --sn-dashboard-header-bg: #ffeb3b;
+  --sn-z-container: 9998;
+  --sn-z-dashboard: 10000;
+  --sn-z-color-picker: 10001;
+  --sn-z-toast: 2147483646;
+  --sn-z-modal: 2147483645;
+  --sn-z-context-menu: 2147483644;
+  --sn-z-error-banner: 2147483643;
+  --sn-transition-fast: 0.15s;
+  --sn-transition-normal: 0.2s;
+  --sn-border-radius: 4px;
+  --sn-border-radius-lg: 8px;
+  --sn-border-radius-xl: 12px;
+}
 
-/* Container */
 #sticky-notes-container {
   position: fixed;
   top: 0;
@@ -8,34 +38,33 @@
   width: 100vw;
   height: 100vh;
   pointer-events: none;
-  z-index: 9998;
+  z-index: var(--sn-z-container);
 }
 
 #sticky-notes-container > * {
   pointer-events: auto;
 }
 
-/* Note Base */
 .sticky-note {
   position: absolute;
   width: 200px;
   min-height: 150px;
-  border-radius: 4px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
+  border-radius: var(--sn-border-radius);
+  box-shadow: var(--sn-shadow);
   display: flex;
   flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.45;
-  color: #333;
-  transition: box-shadow 0.2s ease, transform 0.1s ease;
+  font-family: var(--sn-font-family);
+  font-size: var(--sn-font-size);
+  line-height: var(--sn-line-height);
+  color: var(--sn-text-color);
+  transition: box-shadow var(--sn-transition-normal) ease, transform 0.1s ease;
+  animation: popIn var(--sn-transition-normal) ease-out;
 }
 
 .sticky-note:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--sn-shadow-hover);
 }
 
-/* Note highlight animation (for dashboard jump-to) */
 @keyframes noteHighlightPulse {
   0%, 100% { box-shadow: 0 0 0 3px rgba(33, 150, 243, 0); }
   50% { box-shadow: 0 0 0 6px rgba(33, 150, 243, 0.6); }
@@ -45,14 +74,13 @@
   animation: noteHighlightPulse 0.5s ease 3;
 }
 
-/* Header */
 .note-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 5px 8px;
   cursor: move;
-  border-radius: 4px 4px 0 0;
+  border-radius: var(--sn-border-radius) var(--sn-border-radius) 0 0;
   user-select: none;
 }
 
@@ -77,20 +105,27 @@
   font-size: 13px;
   padding: 2px 4px;
   border-radius: 3px;
-  transition: background-color 0.15s;
+  transition: background-color var(--sn-transition-fast);
   line-height: 1;
+  border: none;
+  background: none;
+  font-family: inherit;
 }
 
 .note-btn:hover {
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: var(--sn-bg-hover);
+}
+
+.note-btn:focus-visible {
+  outline: 2px solid var(--sn-primary);
+  outline-offset: 1px;
 }
 
 .note-btn.delete-btn:hover {
-  background-color: #d32f2f;
+  background-color: var(--sn-danger);
   color: white;
 }
 
-/* Content */
 .note-content {
   flex: 1;
   outline: none;
@@ -104,7 +139,6 @@
   background-color: rgba(255, 255, 255, 0.35);
 }
 
-/* Footer / Resize */
 .note-footer {
   position: relative;
   height: 10px;
@@ -122,7 +156,7 @@
     linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.2) 50%),
     linear-gradient(135deg, transparent 60%, rgba(0,0,0,0.15) 60%),
     linear-gradient(135deg, transparent 70%, rgba(0,0,0,0.1) 70%);
-  border-radius: 0 0 4px 0;
+  border-radius: 0 0 var(--sn-border-radius) 0;
 }
 
 .resize-handle:hover {
@@ -132,28 +166,32 @@
     linear-gradient(135deg, transparent 70%, rgba(0,0,0,0.2) 70%);
 }
 
-/* Color Picker Popup */
+.resize-handle:focus-visible {
+  outline: 2px solid var(--sn-primary);
+  outline-offset: -2px;
+}
+
 .color-picker-popup {
   position: absolute;
   top: 30px;
   left: 8px;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--sn-bg-white);
+  border: 1px solid var(--sn-border-color);
   border-radius: 6px;
   padding: 6px;
   display: flex;
   gap: 6px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  z-index: 10001;
+  z-index: var(--sn-z-color-picker);
 }
 
 .color-swatch {
   width: 22px;
   height: 22px;
-  border-radius: 4px;
+  border-radius: var(--sn-border-radius);
   border: 2px solid transparent;
   cursor: pointer;
-  transition: border-color 0.15s, transform 0.1s;
+  transition: border-color var(--sn-transition-fast), transform 0.1s;
 }
 
 .color-swatch:hover {
@@ -161,22 +199,25 @@
   transform: scale(1.1);
 }
 
-/* Rich Text Toolbar - floating popup, never shifts text */
+.color-swatch:focus-visible {
+  outline: 2px solid var(--sn-primary);
+  outline-offset: 1px;
+}
+
 .richtext-toolbar {
   position: absolute;
   left: 6px;
   display: flex;
   gap: 2px;
   padding: 3px 4px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--sn-bg-white);
+  border: 1px solid var(--sn-border-color);
   border-radius: 6px;
   box-shadow: 0 4px 14px rgba(0,0,0,0.18);
   z-index: 10;
   animation: sticky-notes-fade-in 0.1s ease-out;
 }
 
-/* Formatting toggle button in the note header */
 .rt-toggle-btn {
   font-weight: 700;
   font-size: 13px;
@@ -185,16 +226,16 @@
 }
 
 .rt-btn {
-  background: #fff;
+  background: var(--sn-bg-white);
   border: 1px solid #ccc;
   border-radius: 3px;
   padding: 2px 6px;
   font-size: 12px;
   cursor: pointer;
-  color: #333;
+  color: var(--sn-text-color);
   min-width: 24px;
   text-align: center;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: background-color var(--sn-transition-fast), border-color var(--sn-transition-fast);
   line-height: 1.3;
 }
 
@@ -207,18 +248,17 @@
   background-color: #ddd;
 }
 
-/* Error Banner */
 .sticky-notes-error-banner {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #d32f2f;
+  background: var(--sn-danger);
   color: white;
   padding: 10px 20px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-  font-size: 14px;
-  z-index: 99999;
+  font-family: var(--sn-font-family);
+  font-size: var(--sn-font-size);
+  z-index: var(--sn-z-error-banner);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -240,7 +280,6 @@
   background: rgba(255,255,255,0.4);
 }
 
-/* Dashboard Overlay */
 #notes-dashboard {
   position: fixed;
   top: 0;
@@ -248,7 +287,7 @@
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.65);
-  z-index: 10000;
+  z-index: var(--sn-z-dashboard);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -260,8 +299,8 @@
   width: 85%;
   max-width: 850px;
   max-height: 85vh;
-  background-color: white;
-  border-radius: 8px;
+  background-color: var(--sn-bg-white);
+  border-radius: var(--sn-border-radius-lg);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   display: flex;
@@ -273,7 +312,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background-color: #ffeb3b;
+  background-color: var(--sn-dashboard-header-bg);
   color: #222;
   font-weight: 600;
 }
@@ -290,12 +329,12 @@
 }
 
 .dark-toggle-btn {
-  background: none !important;
-  border: none !important;
-  font-size: 18px !important;
-  padding: 2px 6px !important;
+  background: none;
+  border: none;
+  font-size: 18px;
+  padding: 2px 6px;
   opacity: 0.7;
-  transition: opacity 0.15s;
+  transition: opacity var(--sn-transition-fast);
 }
 
 .dark-toggle-btn:hover {
@@ -307,51 +346,56 @@
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #d32f2f;
+  color: var(--sn-danger);
   padding: 2px 8px;
-  border-radius: 4px;
-  transition: background-color 0.15s;
+  border-radius: var(--sn-border-radius);
+  transition: background-color var(--sn-transition-fast);
 }
 
 .dashboard-close:hover {
-  background-color: rgba(0,0,0,0.08);
+  background-color: var(--sn-bg-hover);
 }
 
-/* Dashboard Search */
+.dashboard-close:focus-visible,
+.dark-toggle-btn:focus-visible {
+  outline: 2px solid var(--sn-primary);
+  outline-offset: 1px;
+}
+
 .dashboard-search {
   display: flex;
   align-items: center;
   padding: 8px 20px;
   border-bottom: 1px solid #eee;
-  background-color: #fff;
+  background-color: var(--sn-bg-white);
   gap: 8px;
 }
 
 .dashboard-search-input {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--sn-border-color);
   border-radius: 6px;
-  font-size: 14px;
+  font-size: var(--sn-font-size);
   outline: none;
-  background-color: #fff;
-  color: #333;
-  transition: border-color 0.2s;
+  background-color: var(--sn-bg-white);
+  color: var(--sn-text-color);
+  transition: border-color var(--sn-transition-normal);
 }
 
 .dashboard-search-input:focus {
-  border-color: #1976d2;
+  border-color: var(--sn-primary);
   box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
 }
 
 .dashboard-search-clear {
   background: none;
   border: none;
-  font-size: 14px;
+  font-size: var(--sn-font-size);
   cursor: pointer;
-  color: #999;
+  color: var(--sn-text-muted);
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--sn-border-radius);
 }
 
 .dashboard-search-clear:hover {
@@ -359,10 +403,9 @@
   color: #666;
 }
 
-/* Dashboard Keyboard Navigation */
 .dashboard-row-selected {
-  background-color: #e3f2fd !important;
-  outline: 2px solid #1976d2;
+  background-color: var(--sn-primary-light);
+  outline: 2px solid var(--sn-primary);
   outline-offset: -2px;
 }
 
@@ -389,7 +432,7 @@
 .dashboard-table th {
   text-align: left;
   padding: 10px 8px;
-  border-bottom: 2px solid #ddd;
+  border-bottom: 2px solid var(--sn-border-color);
   color: #555;
   font-weight: 600;
   font-size: 12px;
@@ -404,11 +447,11 @@
 }
 
 .dashboard-table tbody tr:hover {
-  background-color: #fafafa;
+  background-color: var(--sn-bg-light);
 }
 
 .dashboard-table a {
-  color: #1976d2;
+  color: var(--sn-primary);
   text-decoration: none;
 }
 
@@ -424,40 +467,44 @@
 }
 
 .dash-delete-btn {
-  background-color: #fff;
-  color: #d32f2f;
+  background-color: var(--sn-bg-white);
+  color: var(--sn-danger);
   border: 1px solid #ffcdd2;
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: var(--sn-border-radius);
   cursor: pointer;
   font-size: 12px;
-  transition: all 0.15s;
+  transition: all var(--sn-transition-fast);
 }
 
 .dash-delete-btn:hover {
-  background-color: #d32f2f;
+  background-color: var(--sn-danger);
   color: white;
-  border-color: #d32f2f;
+  border-color: var(--sn-danger);
 }
 
-/* Toolbar */
+.dash-delete-btn:focus-visible {
+  outline: 2px solid var(--sn-primary);
+  outline-offset: 1px;
+}
+
 .dashboard-toolbar {
   display: flex;
   gap: 10px;
   padding: 12px 20px;
   border-top: 1px solid #eee;
-  background-color: #fafafa;
+  background-color: var(--sn-bg-light);
 }
 
 .dash-btn {
   padding: 8px 14px;
-  border: 1px solid #ddd;
-  background-color: white;
+  border: 1px solid var(--sn-border-color);
+  background-color: var(--sn-bg-white);
   color: #444;
   border-radius: 5px;
   cursor: pointer;
   font-size: 13px;
-  transition: all 0.15s;
+  transition: all var(--sn-transition-fast);
 }
 
 .dash-btn:hover {
@@ -465,20 +512,23 @@
   border-color: #ccc;
 }
 
-/* Minimized state */
+.dash-btn:focus-visible {
+  outline: 2px solid var(--sn-primary);
+  outline-offset: 1px;
+}
+
 .sticky-note[data-minimized="true"] {
-  min-height: 32px !important;
+  min-height: 32px;
 }
 
 .sticky-note[data-minimized="true"] .note-content {
-  display: none !important;
+  display: none;
 }
 
 .sticky-note[data-minimized="true"] .resize-handle {
-  display: none !important;
+  display: none;
 }
 
-/* Scrollbar styling for note content */
 .note-content::-webkit-scrollbar {
   width: 6px;
 }
@@ -496,19 +546,10 @@
   background: rgba(0,0,0,0.25);
 }
 
-/* Animation for new notes */
 @keyframes popIn {
   0% { opacity: 0; transform: scale(0.92); }
   100% { opacity: 1; transform: scale(1); }
 }
-
-.sticky-note {
-  animation: popIn 0.2s ease-out;
-}
-
-/* ===================
-   Dark Mode Styles
-   =================== */
 
 #sticky-notes-container.dark-mode .sticky-note {
   color: #e0e0e0;
@@ -557,7 +598,6 @@
   border-color: #777;
 }
 
-/* Dashboard dark mode */
 .sticky-notes-dark .dashboard-content {
   background-color: #1e1e1e;
   color: #e0e0e0;
@@ -629,7 +669,7 @@
 }
 
 .sticky-notes-dark .dashboard-row-selected {
-  background-color: #2a3a2a !important;
+  background-color: #2a3a2a;
   outline-color: #81c784;
 }
 
@@ -637,26 +677,25 @@ body.sticky-notes-dark .dashboard-close {
   color: #f06292;
 }
 
-/* Toast notifications (replaces alert()) */
 .sticky-notes-toast {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  z-index: 2147483647;
+  z-index: var(--sn-z-toast);
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px 18px;
-  border-radius: 8px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-  font-size: 14px;
+  border-radius: var(--sn-border-radius-lg);
+  font-family: var(--sn-font-family);
+  font-size: var(--sn-font-size);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   transition: opacity 0.3s ease, transform 0.3s ease;
   animation: toast-slide-in 0.3s ease;
 }
-.sticky-notes-toast-info { background: #e3f2fd; color: #1565c0; }
-.sticky-notes-toast-success { background: #e8f5e9; color: #2e7d32; }
-.sticky-notes-toast-error { background: #ffebee; color: #c62828; }
+.sticky-notes-toast-info { background: var(--sn-primary-light); color: #1565c0; }
+.sticky-notes-toast-success { background: #e8f5e9; color: var(--sn-success); }
+.sticky-notes-toast-error { background: #ffebee; color: var(--sn-danger-dark); }
 .sticky-notes-toast-fade-out { opacity: 0; transform: translateY(10px); }
 .sticky-notes-toast .toast-icon { font-size: 16px; }
 .sticky-notes-toast .toast-message { flex: 1; }
@@ -664,7 +703,7 @@ body.sticky-notes-dark .dashboard-close {
   cursor: pointer;
   background: none;
   border: none;
-  font-size: 14px;
+  font-size: var(--sn-font-size);
   opacity: 0.6;
   padding: 0 2px;
 }
@@ -674,13 +713,10 @@ body.sticky-notes-dark .dashboard-close {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Dark mode toast styles */
 body.sticky-notes-dark .sticky-notes-toast-info { background: #1a2e3e; color: #80cbc4; }
 body.sticky-notes-dark .sticky-notes-toast-success { background: #1a3e20; color: #a5d6a7; }
 body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #ef9a9a; }
 
-/* Save status — shown in the footer of the note being edited,
-   tells the user whether a save is still in flight */
 .note-footer .note-save-status {
   position: absolute;
   left: 10px;
@@ -692,22 +728,21 @@ body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #
   pointer-events: none;
   user-select: none;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--sn-transition-normal) ease;
 }
 .note-footer .note-save-status-saving,
 .note-footer .note-save-status-saved,
 .note-footer .note-save-status-error {
   opacity: 1;
 }
-.note-footer .note-save-status-saving { color: #8d6e00; }
-.note-footer .note-save-status-saved  { color: #2e7d32; }
-.note-footer .note-save-status-error  { color: #c62828; pointer-events: auto; }
+.note-footer .note-save-status-saving { color: var(--sn-warning); }
+.note-footer .note-save-status-saved  { color: var(--sn-success); }
+.note-footer .note-save-status-error  { color: var(--sn-danger-dark); pointer-events: auto; }
 
 .dark-mode .note-footer .note-save-status-saving { color: #ffd180; }
 .dark-mode .note-footer .note-save-status-saved  { color: #a5d6a7; }
 .dark-mode .note-footer .note-save-status-error  { color: #ef9a9a; }
 
-/* ── Confirmation Modal ── */
 .sticky-notes-modal-overlay {
   position: fixed;
   top: 0;
@@ -718,18 +753,18 @@ body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999999;
+  z-index: var(--sn-z-modal);
   animation: sticky-notes-fade-in 0.15s ease-out;
 }
 
 .sticky-notes-modal {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--sn-bg-white);
+  border-radius: var(--sn-border-radius-xl);
   padding: 24px;
   max-width: 400px;
   width: 90%;
   box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-  animation: sticky-notes-slide-up 0.2s ease-out;
+  animation: sticky-notes-slide-up var(--sn-transition-normal) ease-out;
 }
 
 .sticky-notes-modal .modal-title {
@@ -741,7 +776,7 @@ body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #
 
 .sticky-notes-modal .modal-message {
   margin: 0 0 20px 0;
-  font-size: 14px;
+  font-size: var(--sn-font-size);
   line-height: 1.5;
   color: #444;
 }
@@ -754,11 +789,16 @@ body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #
 
 .sticky-notes-modal .modal-btn {
   padding: 8px 18px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--sn-border-color);
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
-  transition: background 0.15s, border-color 0.15s;
+  font-size: var(--sn-font-size);
+  transition: background var(--sn-transition-fast), border-color var(--sn-transition-fast);
+}
+
+.sticky-notes-modal .modal-btn:focus-visible {
+  outline: 2px solid var(--sn-primary);
+  outline-offset: 1px;
 }
 
 .sticky-notes-modal .modal-btn-cancel {
@@ -772,7 +812,7 @@ body.sticky-notes-dark .sticky-notes-toast-error { background: #3e1a1a; color: #
 
 .sticky-notes-modal .modal-btn-danger {
   background: #dc3545;
-  color: #fff;
+  color: var(--sn-bg-white);
   border-color: #dc3545;
 }
 
@@ -815,31 +855,34 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* ── Toast Action Button ── */
 .sticky-notes-toast .toast-action-btn {
-  background: #fff;
-  border: 1px solid #1976d2;
-  color: #1976d2;
+  background: var(--sn-bg-white);
+  border: 1px solid var(--sn-primary);
+  color: var(--sn-primary);
   padding: 2px 10px;
-  border-radius: 4px;
+  border-radius: var(--sn-border-radius);
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
   margin-left: 8px;
-  transition: background 0.15s;
+  transition: background var(--sn-transition-fast);
 }
 
 .sticky-notes-toast .toast-action-btn:hover {
-  background: #e3f2fd;
+  background: var(--sn-primary-light);
 }
 
-/* ── Character Count ── */
+.sticky-notes-toast .toast-action-btn:focus-visible {
+  outline: 2px solid var(--sn-primary);
+  outline-offset: 1px;
+}
+
 .note-footer .note-char-count {
   position: absolute;
   right: 18px;
   bottom: 2px;
   font-size: 10px;
-  color: #999;
+  color: var(--sn-text-muted);
   opacity: 0.6;
   pointer-events: none;
   user-select: none;
@@ -853,17 +896,16 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
   color: #777;
 }
 
-/* ── Context Menu ── */
 .sticky-notes-context-menu {
   position: fixed;
-  z-index: 9999999;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  z-index: var(--sn-z-context-menu);
+  background: var(--sn-bg-white);
+  border: 1px solid var(--sn-border-color);
+  border-radius: var(--sn-border-radius-lg);
   padding: 4px 0;
   min-width: 180px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--sn-font-family);
   font-size: 13px;
   animation: sticky-notes-fade-in 0.1s ease-out;
 }
@@ -921,9 +963,9 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
   flex-wrap: wrap;
   gap: 4px;
   padding: 8px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  background: var(--sn-bg-white);
+  border: 1px solid var(--sn-border-color);
+  border-radius: var(--sn-border-radius-lg);
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   width: 160px;
   animation: sticky-notes-fade-in 0.1s ease-out;
@@ -937,7 +979,7 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
 .sticky-notes-context-menu .ctx-color-swatch {
   width: 24px;
   height: 24px;
-  border-radius: 4px;
+  border-radius: var(--sn-border-radius);
   cursor: pointer;
   border: 2px solid transparent;
   transition: transform 0.1s, border-color 0.1s;
@@ -948,7 +990,6 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
   border-color: #333;
 }
 
-/* ── Dashboard Pagination ── */
 .dashboard-pagination {
   display: flex;
   align-items: center;
@@ -967,7 +1008,7 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
 .dashboard-pagination .pagination-btn {
   padding: 4px 12px;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: var(--sn-border-radius);
   background: #f8f8f8;
   cursor: pointer;
   font-size: 13px;
@@ -980,6 +1021,11 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
 .dashboard-pagination .pagination-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.dashboard-pagination .pagination-btn:focus-visible {
+  outline: 2px solid var(--sn-primary);
+  outline-offset: 1px;
 }
 
 .sticky-notes-dark .dashboard-pagination {
@@ -996,7 +1042,6 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
   color: #ddd;
 }
 
-/* ── Shortcuts Reference Panel ── */
 .sticky-notes-shortcuts-overlay {
   position: fixed;
   top: 0;
@@ -1007,18 +1052,18 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999999;
+  z-index: var(--sn-z-modal);
   animation: sticky-notes-fade-in 0.15s ease-out;
 }
 
 .sticky-notes-shortcuts-panel {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--sn-bg-white);
+  border-radius: var(--sn-border-radius-xl);
   padding: 24px;
   max-width: 420px;
   width: 90%;
   box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-  animation: sticky-notes-slide-up 0.2s ease-out;
+  animation: sticky-notes-slide-up var(--sn-transition-normal) ease-out;
 }
 
 .sticky-notes-shortcuts-panel .shortcuts-title {
@@ -1046,7 +1091,7 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
   padding: 3px 8px;
   background: #f0f0f0;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: var(--sn-border-radius);
   font-family: monospace;
   font-size: 12px;
   min-width: 80px;
@@ -1055,7 +1100,7 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
 }
 
 .sticky-notes-shortcuts-panel .shortcut-desc {
-  font-size: 14px;
+  font-size: var(--sn-font-size);
   color: #555;
   text-align: right;
   flex: 1;
@@ -1065,11 +1110,11 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
   display: block;
   width: 100%;
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--sn-border-color);
   border-radius: 6px;
   background: #f5f5f5;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--sn-font-size);
   text-align: center;
 }
 
@@ -1095,4 +1140,45 @@ body.sticky-notes-dark .sticky-notes-modal .modal-btn-cancel:hover {
   background: #3a3a3a;
   border-color: #555;
   color: #ddd;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky-note,
+  .sticky-notes-toast,
+  .sticky-notes-modal,
+  .sticky-notes-shortcuts-overlay,
+  .sticky-notes-context-menu,
+  .richtext-toolbar,
+  .color-picker-popup {
+    animation: none;
+    transition: none;
+  }
+
+  .sticky-note.note-highlight {
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.6);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sn-text-color: #e0e0e0;
+    --sn-text-muted: #777;
+    --sn-border-color: #555;
+    --sn-bg-white: #1e1e1e;
+    --sn-bg-light: #262626;
+    --sn-bg-hover: rgba(255, 255, 255, 0.12);
+  }
+}
+
+@media print {
+  #sticky-notes-container,
+  #notes-dashboard,
+  .sticky-notes-toast,
+  .sticky-notes-modal-overlay,
+  .sticky-notes-context-menu,
+  .sticky-notes-error-banner,
+  .sticky-notes-shortcuts-overlay {
+    display: none;
+  }
 }

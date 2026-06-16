@@ -1,12 +1,11 @@
-// Drag functionality with rAF-based smooth movement, touch support, and proper cleanup
-
 import { debouncedSave } from './storage.js';
 
 let dragCleanup = null;
+let touchDragCleanup = null;
 
 export function makeDraggable(element, handle) {
   handle.style.cursor = 'move';
-  handle.style.touchAction = 'none'; // Prevent scroll interference
+  handle.style.touchAction = 'none';
   
   handle.addEventListener('mousedown', startDrag);
   handle.addEventListener('touchstart', startDragTouch, { passive: false });
@@ -14,16 +13,14 @@ export function makeDraggable(element, handle) {
   function startDrag(e) {
     e.preventDefault();
     initiateDrag(e.clientX, e.clientY, 'mouse');
-    // cleanup is handled by onMouseUp inside initiateDrag
   }
   
   function startDragTouch(e) {
     e.preventDefault();
-    if (e.touches.length !== 1) return; // Only single-finger drag
+    if (e.touches.length !== 1) return;
     const touch = e.touches[0];
-    // Use touch-only move/end handlers — don't add mouse listeners
-    // to avoid double-firing on hybrid devices (Surface, etc.)
     const dragState = initiateDrag(touch.clientX, touch.clientY, 'touch');
+    if (!dragState) return;
     
     const onTouchMove = (e) => {
       if (e.touches.length !== 1) return;
@@ -40,10 +37,17 @@ export function makeDraggable(element, handle) {
     document.addEventListener('touchmove', onTouchMove, { passive: false });
     document.addEventListener('touchend', onTouchEnd);
     document.addEventListener('touchcancel', onTouchEnd);
+
+    touchDragCleanup = () => {
+      if (dragState.rafId) cancelAnimationFrame(dragState.rafId);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchEnd);
+    };
   }
   
   function initiateDrag(clientX, clientY, inputType) {
-    if (element.dataset.minimized === 'true') return;
+    if (element.dataset.minimized === 'true') return null;
     
     const startLeft = element.offsetLeft;
     const startTop = element.offsetTop;
@@ -54,8 +58,14 @@ export function makeDraggable(element, handle) {
     let rafId = null;
     
     function applyMovement() {
-      element.style.left = (startLeft + currentDx) + 'px';
-      element.style.top = (startTop + currentDy) + 'px';
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const noteW = element.offsetWidth;
+      const noteH = element.offsetHeight;
+      const clampedLeft = Math.max(0, Math.min(startLeft + currentDx, vw - noteW));
+      const clampedTop = Math.max(0, Math.min(startTop + currentDy, vh - noteH));
+      element.style.left = clampedLeft + 'px';
+      element.style.top = clampedTop + 'px';
       rafId = null;
     }
     
@@ -71,12 +81,17 @@ export function makeDraggable(element, handle) {
     
     function onEnd() {
       if (rafId) cancelAnimationFrame(rafId);
-      element.style.left = (startLeft + currentDx) + 'px';
-      element.style.top = (startTop + currentDy) + 'px';
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const noteW = element.offsetWidth;
+      const noteH = element.offsetHeight;
+      const finalLeft = Math.max(0, Math.min(startLeft + currentDx, vw - noteW));
+      const finalTop = Math.max(0, Math.min(startTop + currentDy, vh - noteH));
+      element.style.left = finalLeft + 'px';
+      element.style.top = finalTop + 'px';
       debouncedSave();
     }
     
-    // Mouse-only event handlers
     if (inputType === 'mouse') {
       const onMouseMove = (e) => {
         e.preventDefault();
@@ -97,16 +112,21 @@ export function makeDraggable(element, handle) {
       };
     }
     
-    return { onMove, onEnd };
+    return { onMove, onEnd, rafId };
   }
 }
 
 export function initDragCleanup() {
-  // Clean up stray drag listeners on visibility change
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && dragCleanup) {
-      dragCleanup();
-      dragCleanup = null;
+    if (document.hidden) {
+      if (dragCleanup) {
+        dragCleanup();
+        dragCleanup = null;
+      }
+      if (touchDragCleanup) {
+        touchDragCleanup();
+        touchDragCleanup = null;
+      }
     }
   });
 }

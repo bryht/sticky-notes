@@ -6,9 +6,7 @@ import { showToast, showConfirmModal } from './error.js';
 import { validateImportData } from './validation.js';
 import { getDarkMode } from './darkmode.js';
 
-// ===================
-// Minimize / Restore
-// ===================
+const MAX_IMPORT_FILE_SIZE = 10 * 1024 * 1024;
 
 export function minimizeNote(note, btn) {
   note.dataset.minimized = 'true';
@@ -17,8 +15,9 @@ export function minimizeNote(note, btn) {
   note.style.overflow = 'hidden';
   note.style.resize = 'none';
   note.querySelector('.note-content').style.display = 'none';
-  btn.innerHTML = '□'; // maximize icon
+  btn.innerHTML = '□';
   btn.title = 'Restore';
+  btn.setAttribute('aria-label', 'Restore');
 }
 
 export function restoreNote(note, btn) {
@@ -28,15 +27,15 @@ export function restoreNote(note, btn) {
   note.querySelector('.note-content').style.display = '';
   btn.innerHTML = '─';
   btn.title = 'Minimize';
+  btn.setAttribute('aria-label', 'Minimize');
 }
-
-// ===================
-// Resize Handle
-// ===================
 
 export function addResizeHandle(note, footer) {
   const handle = document.createElement('div');
   handle.className = 'resize-handle';
+  handle.setAttribute('role', 'separator');
+  handle.setAttribute('aria-label', 'Resize note');
+  handle.setAttribute('tabindex', '0');
   footer.appendChild(handle);
   
   handle.addEventListener('mousedown', (e) => {
@@ -61,7 +60,6 @@ export function addResizeHandle(note, footer) {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       saveNotes();
-      // Dispatch resized event for per-site defaults
       note.dispatchEvent(new CustomEvent('resized'));
     }
     
@@ -70,39 +68,52 @@ export function addResizeHandle(note, footer) {
   });
 }
 
-// ===================
-// Color Picker
-// ===================
-
 export function showColorPicker(note) {
-  // Remove existing picker
   const existing = note.querySelector('.color-picker-popup');
   if (existing) { existing.remove(); return; }
   
   const picker = document.createElement('div');
   picker.className = 'color-picker-popup';
+  picker.setAttribute('role', 'listbox');
+  picker.setAttribute('aria-label', 'Choose note color');
 
   const colorMap = getDarkMode() ? DARK_NOTE_COLORS : NOTE_COLORS;
+  const currentColor = note.dataset.color || 'yellow';
+  const origColors = colorMap[currentColor] || colorMap.yellow;
+  const origBg = origColors.bg;
+  const origHeaderBg = origColors.header;
   
-  // Self-cleaning: remove picker and document listener together
   let onOutsideClick = null;
+  let noteDestroyHandler = null;
   const cleanup = () => {
     picker.remove();
     if (onOutsideClick) document.removeEventListener('click', onOutsideClick);
+    if (noteDestroyHandler) note.removeEventListener('note-destroying', noteDestroyHandler);
   };
+
+  noteDestroyHandler = () => cleanup();
+  note.addEventListener('note-destroying', noteDestroyHandler);
 
   Object.entries(colorMap).forEach(([key, colors]) => {
     const swatch = document.createElement('div');
     swatch.className = 'color-swatch';
     swatch.style.backgroundColor = colors.bg;
     swatch.title = key;
+    swatch.setAttribute('role', 'option');
+    swatch.setAttribute('aria-label', key);
+    swatch.setAttribute('tabindex', '0');
+    swatch.setAttribute('aria-selected', key === currentColor ? 'true' : 'false');
     swatch.addEventListener('click', () => {
       updateNoteColor(note, key);
       cleanup();
     });
-    // Hover preview: temporarily show this color on the note
-    const origBg = getComputedStyle(note).backgroundColor;
-    const origHeaderBg = note.querySelector('.note-header') ? getComputedStyle(note.querySelector('.note-header')).backgroundColor : '';
+    swatch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        updateNoteColor(note, key);
+        cleanup();
+      }
+    });
     swatch.addEventListener('mouseenter', () => {
       note.style.backgroundColor = colors.bg;
       const header = note.querySelector('.note-header');
@@ -116,10 +127,12 @@ export function showColorPicker(note) {
     picker.appendChild(swatch);
   });
   
-  // Close when clicking outside
   onOutsideClick = (e) => {
     const header = note.querySelector('.note-header');
     if (!picker.contains(e.target) && !(header && header.contains(e.target))) {
+      note.style.backgroundColor = origBg;
+      const header = note.querySelector('.note-header');
+      if (header) header.style.backgroundColor = origHeaderBg;
       cleanup();
     }
   };
@@ -127,10 +140,6 @@ export function showColorPicker(note) {
   document.addEventListener('click', onOutsideClick);
   note.appendChild(picker);
 }
-
-// ===================
-// Export / Import
-// ===================
 
 export async function exportNotes() {
   try {
@@ -151,15 +160,12 @@ export async function exportNotes() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    // Notify background to update badge
-    chrome.runtime.sendMessage({ action: 'updateBadge', count: notes.length });
+    chrome.runtime.sendMessage({ action: 'updateBadge' });
   } catch (err) {
     console.error('Export failed:', err);
     showToast('Export failed. See console for details.', 'error');
   }
 }
-
-
 
 export function importNotes() {
   const input = document.createElement('input');
@@ -169,6 +175,11 @@ export function importNotes() {
   input.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (file.size > MAX_IMPORT_FILE_SIZE) {
+      showToast(`File too large (max ${Math.round(MAX_IMPORT_FILE_SIZE / 1024 / 1024)}MB)`, 'error');
+      return;
+    }
     
     try {
       const text = await file.text();
@@ -179,14 +190,12 @@ export function importNotes() {
         return;
       }
       
-      // Validate import schema
       const validation = validateImportData(data);
       if (!validation.valid) {
         showToast('Invalid import: ' + validation.error, 'error');
         return;
       }
       
-      // Use styled modal instead of window.confirm()
       const confirmed = await showConfirmModal(
         `Import ${data.notes.length} notes? This will REPLACE all existing notes.`,
         {
@@ -198,10 +207,8 @@ export function importNotes() {
       );
       const mode = confirmed ? 'replace' : 'merge';
       
-      // Clear current notes from DOM
       document.querySelectorAll('.sticky-note').forEach(el => el.remove());
       
-      // Send to background with merge mode
       await new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({
           action: 'importNotes',
@@ -213,10 +220,12 @@ export function importNotes() {
         });
       });
       
-      // Reload current page notes
       data.notes
         .filter(n => {
-          try { return new URL(n.url).hostname === window.location.hostname; } catch(e) { return false; }
+          try {
+            const url = new URL(n.url);
+            return url.hostname === window.location.hostname || n.url.startsWith('file://');
+          } catch(e) { return false; }
         })
         .forEach(n => {
           createNote(n.content, n.position, n.id, {
@@ -226,7 +235,6 @@ export function importNotes() {
           });
         });
       
-      // Refresh dashboard if open
       const dash = document.getElementById('notes-dashboard');
       if (dash) {
         dash.remove();

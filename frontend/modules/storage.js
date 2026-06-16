@@ -3,18 +3,12 @@ import { getApiKey } from './api.js';
 import { saveNotesToBackend, loadNotesFromBackend } from './storage-backend.js';
 import { markPending, markSaving, markSaved, markError } from './save-status.js';
 
-// Until loadNotes() finishes populating the DOM, we must NOT save — an empty
-// DOM at that point would wipe the user's stored notes for this URL.
-// This gate guards against the unload-before-load race that lost notes when
-// the user closed the tab quickly after opening it.
 let notesLoaded = false;
 
-// Debounce utility
 let saveTimeout = null;
-// True once an edit has scheduled a save that hasn't fired yet. Gates
-// markPending() so it's called once per debounce window — not once per
-// keystroke — keeping the save-status counter balanced with markSaved().
 let savePending = false;
+let saveInProgress = false;
+
 export function debouncedSave() {
   if (!notesLoaded) return;
   if (!savePending) {
@@ -28,9 +22,6 @@ export function debouncedSave() {
   }, SAVE_DEBOUNCE_MS);
 }
 
-/**
- * Collect all visible notes from the DOM and return as serializable data.
- */
 function collectNotesFromDOM() {
   const notes = document.querySelectorAll('.sticky-note:not([data-pending-delete])');
   const pendingNotes = document.querySelectorAll('.sticky-note[data-pending-delete]');
@@ -52,16 +43,11 @@ function collectNotesFromDOM() {
   };
 
   notes.forEach(collectNote);
-  // Include pending-delete notes so they survive in storage during the undo window
   pendingNotes.forEach(collectNote);
 
   return { currentUrl, currentPageNotes };
 }
 
-/**
- * Write current page notes directly to chrome.storage.local.
- * Used by saveNotes(), saveNotesNow() — no background script roundtrip.
- */
 function writeNotesToStorage(currentUrl, currentPageNotes) {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get(['allNotes', 'urlIndex'], (result) => {
@@ -72,27 +58,34 @@ function writeNotesToStorage(currentUrl, currentPageNotes) {
       const allNotes = result.allNotes || {};
       const urlIndex = result.urlIndex || {};
 
-      // Remove old notes for this URL
       const previousNoteIds = urlIndex[currentUrl] || [];
       previousNoteIds.forEach(noteId => delete allNotes[noteId]);
 
-      // Add current notes
       urlIndex[currentUrl] = [];
       currentPageNotes.forEach(noteData => {
         allNotes[noteData.id] = noteData;
         urlIndex[currentUrl].push(noteData.id);
       });
 
+      const estimatedSize = JSON.stringify(allNotes).length;
+      if (estimatedSize > 9 * 1024 * 1024) {
+        console.warn('Storage approaching quota limit:', Math.round(estimatedSize / 1024) + 'KB');
+      }
+
       chrome.storage.local.set({ allNotes, urlIndex }, () => {
         if (chrome.runtime.lastError) {
           reject(chrome.runtime.lastError);
         } else {
-          // Sync to backend if API key is set
           getApiKey().then(apiKey => {
-            if (apiKey) {
-              saveNotesToBackend(currentUrl, currentPageNotes).catch(err => {
-                console.warn('Backend sync failed:', err.message);
-              });
+            if (apiKey && !saveInProgress) {
+              saveInProgress = true;
+              saveNotesToBackend(currentUrl, currentPageNotes)
+                .catch(err => {
+                  console.warn('Backend sync failed:', err.message);
+                })
+                .finally(() => {
+                  saveInProgress = false;
+                });
             }
           });
           resolve();
@@ -102,32 +95,21 @@ function writeNotesToStorage(currentUrl, currentPageNotes) {
   });
 }
 
-/**
- * Notify background script for badge updates (fire-and-forget).
- */
 function notifyBackgroundForBadge(action, data = {}) {
   try {
     chrome.runtime.sendMessage({ action, ...data });
   } catch (_err) {
-    // Ignore — the direct storage write already succeeded
+    // Extension context may be invalidated
   }
 }
 
-/**
- * Force-save immediately (no debounce). Used before page unload to
- * prevent data loss on refresh/navigation.
- * Writes directly to chrome.storage.local (no message roundtrip) so
- * the browser doesn't kill the tab before the background script replies.
- */
 export function saveNotesNow() {
-  // Guard: don't overwrite stored notes if we never finished loading them
   if (!notesLoaded) return;
 
   clearTimeout(saveTimeout);
   const { currentUrl, currentPageNotes } = collectNotesFromDOM();
 
   markSaving();
-  // Direct storage write — no async message roundtrip to background script.
   writeNotesToStorage(currentUrl, currentPageNotes)
     .then(markSaved)
     .catch(err => {
@@ -135,16 +117,10 @@ export function saveNotesNow() {
       console.warn('Save failed:', err.message);
     });
 
-  // Also notify background so it can update the badge (fire-and-forget)
   notifyBackgroundForBadge('updateBadge');
 }
 
-/**
- * Save all current page notes directly to chrome.storage.local.
- * Sends a fire-and-forget message to background for badge updates.
- */
 export function saveNotes() {
-  // Guard: don't overwrite stored notes if we never finished loading them
   if (!notesLoaded) return Promise.resolve();
 
   const { currentUrl, currentPageNotes } = collectNotesFromDOM();
@@ -161,12 +137,6 @@ export function saveNotes() {
     });
 }
 
-/**
- * Load notes for the current URL.
- * If API key is set, loads from backend; otherwise loads from chrome.storage.local.
- * Resolves once notes are placed in the DOM so the caller knows it's safe to
- * start saving.
- */
 export function loadNotes() {
   const currentUrl = window.location.href.split('#')[0];
 
@@ -186,14 +156,10 @@ export function loadNotes() {
       console.warn('Load failed:', err);
     })
     .finally(() => {
-      // Mark loaded even on failure so the user's subsequent edits can save
       notesLoaded = true;
     });
 }
 
-/**
- * Render an array of loaded notes into the DOM and resolve once they're all placed.
- */
 function renderLoadedNotes(notes) {
   if (!notes || notes.length === 0) return Promise.resolve();
 
@@ -214,9 +180,6 @@ function renderLoadedNotes(notes) {
   });
 }
 
-/**
- * Load notes from chrome.storage.local (fallback).
- */
 function loadFromLocalStorage(currentUrl) {
   return new Promise((resolve) => {
     chrome.storage.local.get(['allNotes', 'urlIndex'], (result) => {
@@ -239,9 +202,6 @@ function loadFromLocalStorage(currentUrl) {
   });
 }
 
-/**
- * Get all notes directly from chrome.storage.local.
- */
 export function getAllNotes() {
   return new Promise((resolve) => {
     chrome.storage.local.get(['allNotes'], (result) => {
@@ -255,9 +215,6 @@ export function getAllNotes() {
   });
 }
 
-/**
- * Delete a single note directly from chrome.storage.local.
- */
 export function deleteNoteById(noteId, url) {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get(['allNotes', 'urlIndex'], (result) => {

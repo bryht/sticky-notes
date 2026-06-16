@@ -1,43 +1,46 @@
-/**
- * Encryption utilities for Sticky Notes backend integration.
- * Uses Web Crypto API for AES-256-GCM encryption.
- */
+const PBKDF2_ITERATIONS = 100000;
+const SALT = new TextEncoder().encode('sticky-notes-encryption-salt-v1');
 
-/**
- * Derive a 256-bit encryption key from the API key using SHA-256.
- * @param {string} apiKey - The user's API key
- * @returns {Promise<CryptoKey>} The derived encryption key
- */
+const keyCache = new Map();
+
 async function deriveKey(apiKey) {
+  if (keyCache.has(apiKey)) {
+    return keyCache.get(apiKey);
+  }
+
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(apiKey);
-
-  // Hash the API key to get 32 bytes
-  const hashBuffer = await crypto.subtle.digest('SHA-256', keyData);
-
-  // Import as AES-GCM key
-  return crypto.subtle.importKey(
+  const keyMaterial = await crypto.subtle.importKey(
     'raw',
-    hashBuffer,
-    { name: 'AES-GCM' },
+    encoder.encode(apiKey),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+
+  const key = await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: SALT,
+      iterations: PBKDF2_ITERATIONS,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
     false,
     ['encrypt', 'decrypt']
   );
+
+  keyCache.set(apiKey, key);
+  return key;
 }
 
-/**
- * Encrypt content using AES-256-GCM.
- * @param {string} plaintext - The content to encrypt
- * @param {string} apiKey - The user's API key
- * @returns {Promise<{iv: number[], data: number[]}>} Encrypted data with IV
- */
 export async function encrypt(plaintext, apiKey) {
   if (!apiKey) {
     throw new Error('API key is required for encryption');
   }
 
   const key = await deriveKey(apiKey);
-  const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for GCM
+  const iv = crypto.getRandomValues(new Uint8Array(12));
   const encoder = new TextEncoder();
   const encoded = encoder.encode(plaintext);
 
@@ -53,15 +56,13 @@ export async function encrypt(plaintext, apiKey) {
   };
 }
 
-/**
- * Decrypt content using AES-256-GCM.
- * @param {{iv: number[], data: number[]}} encrypted - The encrypted data
- * @param {string} apiKey - The user's API key
- * @returns {Promise<string>} Decrypted plaintext
- */
 export async function decrypt(encrypted, apiKey) {
   if (!apiKey) {
     throw new Error('API key is required for decryption');
+  }
+
+  if (!encrypted || !Array.isArray(encrypted.iv) || !Array.isArray(encrypted.data)) {
+    throw new Error('Invalid encrypted data format');
   }
 
   const key = await deriveKey(apiKey);
@@ -76,4 +77,8 @@ export async function decrypt(encrypted, apiKey) {
 
   const decoder = new TextDecoder();
   return decoder.decode(plaintext);
+}
+
+export function clearKeyCache() {
+  keyCache.clear();
 }

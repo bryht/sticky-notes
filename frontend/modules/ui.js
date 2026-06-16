@@ -26,12 +26,21 @@ export function createNotesContainer() {
 }
 
 export function generateId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return 'note-' + crypto.randomUUID();
+  }
   return 'note-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 }
 
 export function bringToFront(note) {
-  highestZIndex++;
+  highestZIndex = Math.min(highestZIndex + 1, 2147483646);
   note.style.zIndex = highestZIndex;
+}
+
+let batchSaveTimer = null;
+function batchSave() {
+  clearTimeout(batchSaveTimer);
+  batchSaveTimer = setTimeout(() => saveNotes(), 50);
 }
 
 export function createNote(content = '', position = null, id = null, options = {}) {
@@ -44,7 +53,6 @@ export function createNote(content = '', position = null, id = null, options = {
     const offsetAmount = 20 + (existingNotes.length * 10);
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    // Default note size: 250w x 200h — clamp to stay within viewport
     const maxLeft = Math.max(10, vw - 270);
     const maxTop = Math.max(10, vh - 220);
     const left = Math.min(80 + offsetAmount, maxLeft);
@@ -54,7 +62,6 @@ export function createNote(content = '', position = null, id = null, options = {
       left: `${left}px`
     };
   } else {
-    // Clamp loaded positions to current viewport too
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const topVal = parseInt(position.top, 10) || 0;
@@ -70,6 +77,8 @@ export function createNote(content = '', position = null, id = null, options = {
   const note = document.createElement('div');
   note.className = 'sticky-note';
   note.id = noteId;
+  note.setAttribute('role', 'article');
+  note.setAttribute('aria-label', 'Sticky note');
   const isMinimized = options.minimized === true;
   note.dataset.color = colorKey;
   note.dataset.minimized = String(isMinimized);
@@ -83,39 +92,41 @@ export function createNote(content = '', position = null, id = null, options = {
     ${isMinimized ? 'overflow: hidden; resize: none;' : ''}
   `;
 
-  // Click to bring to front
   note.addEventListener('mousedown', () => bringToFront(note));
   
-  // Header
   const header = document.createElement('div');
   header.className = 'note-header';
   header.style.backgroundColor = colors.header;
   
-  // Title / drag handle
   const title = document.createElement('span');
   title.className = 'note-title';
   title.textContent = options.title || '';
   header.appendChild(title);
   
-  // Buttons container
   const buttons = document.createElement('div');
   buttons.className = 'note-buttons';
+  buttons.setAttribute('role', 'toolbar');
+  buttons.setAttribute('aria-label', 'Note actions');
 
-  // Color picker btn
-  const colorBtn = document.createElement('span');
+  const colorBtn = document.createElement('button');
+  colorBtn.type = 'button';
   colorBtn.innerHTML = '🎨';
   colorBtn.title = 'Change color';
   colorBtn.className = 'note-btn';
+  colorBtn.setAttribute('aria-label', 'Change color');
+  colorBtn.setAttribute('tabindex', '0');
   colorBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     showColorPicker(note);
   });
   
-  // Minimize btn
-  const minBtn = document.createElement('span');
+  const minBtn = document.createElement('button');
+  minBtn.type = 'button';
   minBtn.innerHTML = isMinimized ? '□' : '─';
   minBtn.title = isMinimized ? 'Restore' : 'Minimize';
   minBtn.className = 'note-btn minimize-btn';
+  minBtn.setAttribute('aria-label', isMinimized ? 'Restore' : 'Minimize');
+  minBtn.setAttribute('tabindex', '0');
   minBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     if (note.dataset.minimized === 'true') {
@@ -125,27 +136,33 @@ export function createNote(content = '', position = null, id = null, options = {
     }
   });
   
-  // Dashboard btn
-  const dashBtn = document.createElement('span');
+  const dashBtn = document.createElement('button');
+  dashBtn.type = 'button';
   dashBtn.innerHTML = '☰';
   dashBtn.title = 'All notes';
   dashBtn.className = 'note-btn';
+  dashBtn.setAttribute('aria-label', 'View all notes');
+  dashBtn.setAttribute('tabindex', '0');
   dashBtn.addEventListener('click', () => showAllNotesDashboard());
   
-  // Delete btn
-  const delBtn = document.createElement('span');
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
   delBtn.innerHTML = '✕';
   delBtn.title = 'Delete';
   delBtn.className = 'note-btn delete-btn';
+  delBtn.setAttribute('aria-label', 'Delete note');
+  delBtn.setAttribute('tabindex', '0');
   delBtn.addEventListener('click', () => deleteNoteElement(note));
   
   buttons.append(colorBtn, minBtn, dashBtn, delBtn);
   header.appendChild(buttons);
   
-  // Content
   const contentArea = document.createElement('div');
   contentArea.className = 'note-content';
   contentArea.contentEditable = true;
+  contentArea.setAttribute('role', 'textbox');
+  contentArea.setAttribute('aria-label', 'Note content');
+  contentArea.setAttribute('aria-multiline', 'true');
   contentArea.innerHTML = sanitizeHTML(content);
   if (isMinimized) contentArea.style.display = 'none';
   contentArea.addEventListener('focus', () => setSaveStatusTarget(saveStatus));
@@ -154,16 +171,13 @@ export function createNote(content = '', position = null, id = null, options = {
     debouncedSave();
   });
 
-  // On resize, save per-site defaults  
   note.addEventListener('resized', () => {
     saveSiteDefault(note);
   });
   
-  // Footer with resize handle and character count
   const footer = document.createElement('div');
   footer.className = 'note-footer';
 
-  // Per-note save indicator (Saving… / Saved / Save failed)
   const saveStatus = document.createElement('span');
   saveStatus.className = 'note-save-status';
   saveStatus.setAttribute('role', 'status');
@@ -172,6 +186,7 @@ export function createNote(content = '', position = null, id = null, options = {
 
   const charCount = document.createElement('span');
   charCount.className = 'note-char-count';
+  charCount.setAttribute('aria-hidden', 'true');
   const updateCharCount = () => {
     const text = contentArea.textContent || '';
     const len = text.length;
@@ -189,13 +204,10 @@ export function createNote(content = '', position = null, id = null, options = {
   
   activeContainer.appendChild(note);
   
-  // Make draggable by header
   makeDraggable(note, header);
-  
-  // Add resize handle
   addResizeHandle(note, footer);
   
-  saveNotes();
+  batchSave();
   return note;
 }
 
@@ -213,34 +225,22 @@ async function saveSiteDefault(note, colorKey) {
   } catch(e) { /* Per-site defaults are best-effort */ }
 }
 
-// ── Undo-Delete System ──
-// Use a Map keyed by noteId so rapid consecutive deletions don't overwrite each other
-const pendingDeletes = new Map(); // noteId -> { timer, data: { note, parent, nextSibling } }
+const pendingDeletes = new Map();
 
-/**
- * Delete a note with a 5-second undo window.
- * Shows a toast with "Undo" button; if not clicked, deletion becomes permanent.
- */
 export function deleteNoteElement(note) {
   const noteId = note.id;
 
-  // If there's already a pending delete for this same note, ignore
   if (pendingDeletes.has(noteId)) return;
 
-  // Store data needed for undo
   const parent = note.parentElement;
   const nextSibling = note.nextElementSibling;
 
-  // Dispatch custom event so other modules can clean up
   note.dispatchEvent(new CustomEvent('note-destroying', { bubbles: true }));
 
-  // Hide the note visually (but keep in storage for undo)
   note.style.display = 'none';
   note.dataset.pendingDelete = 'true';
 
-  // Show undo toast
   showToast('Note deleted', 'Undo', () => {
-    // Undo: restore the note
     if (pendingDeletes.has(noteId)) {
       note.style.display = '';
       delete note.dataset.pendingDelete;
@@ -254,7 +254,6 @@ export function deleteNoteElement(note) {
     }
   });
 
-  // Auto-confirm delete after 5 seconds: remove from DOM *and* storage
   const timer = setTimeout(() => {
     if (pendingDeletes.has(noteId)) {
       note.remove();
@@ -264,6 +263,13 @@ export function deleteNoteElement(note) {
   }, 5000);
 
   pendingDeletes.set(noteId, { timer, data: { note, parent, nextSibling } });
+}
+
+export function cleanupPendingDelete(noteId) {
+  if (pendingDeletes.has(noteId)) {
+    clearTimeout(pendingDeletes.get(noteId).timer);
+    pendingDeletes.delete(noteId);
+  }
 }
 
 export function updateNoteColor(note, colorKey) {
